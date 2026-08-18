@@ -118,10 +118,23 @@ function applyHostTheme(
       options?: { theme?: { background?: string; foreground?: string } };
     }
   ).options;
-  if (!options) return;
-  options.theme = {
-    ...options.theme,
-    background: styles.backgroundColor || options.theme?.background,
-    foreground: styles.color || options.theme?.foreground,
-  };
+  if (!options?.theme) return;
+  const background = parseCssColor(styles.backgroundColor);
+  const foreground = parseCssColor(styles.color);
+  if (!background || !foreground || background === foreground) return;
+  options.theme.background = background;
+  options.theme.foreground = foreground;
+}
+
+function parseCssColor(value: string): string | null {
+  if (!value) return null;
+  if (value.startsWith("#") && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/iu.test(value)) {
+    return value;
+  }
+  const rgb = value.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/u);
+  if (!rgb) return null;
+  const hex = [rgb[1], rgb[2], rgb[3]]
+    .map((part) => Number(part).toString(16).padStart(2, "0"))
+    .join("");
+  return `#${hex}`;
 }

@@ -38,6 +38,8 @@ export class TerminalPlugin extends Plugin {
   #sessions: TerminalSessionClient;
   #rendererStore = createTerminalRendererStore();
   #rendererFactories: TerminalRendererFactories = defaultTerminalRendererFactories;
+  #hostListeners = new Set<() => void>();
+  #hostGeneration = 0;
 
   constructor(
     app: App,
@@ -56,12 +58,28 @@ export class TerminalPlugin extends Plugin {
     return this.#rendererStore.generation;
   }
 
+  get hostGeneration(): number {
+    return this.#hostGeneration;
+  }
+
   getSettings(): TerminalPluginSettings {
     return { ...this.#rendererStore.settings };
   }
 
   onSettingsChange(listener: () => void): () => void {
     return this.#rendererStore.subscribe(listener);
+  }
+
+  onHostChange(listener: () => void): () => void {
+    this.#hostListeners.add(listener);
+    return () => {
+      this.#hostListeners.delete(listener);
+    };
+  }
+
+  refreshHostSessions(): void {
+    this.#hostGeneration += 1;
+    for (const listener of this.#hostListeners) listener();
   }
 
   async updateSettings(patch: Partial<TerminalPluginSettings>): Promise<void> {

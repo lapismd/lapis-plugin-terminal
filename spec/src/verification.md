@@ -12,6 +12,9 @@
 | LPT-008 | Implemented | renderer contract and package.json omit terminal-host |
 | LPT-009 | Implemented | settings persist terminal.renderer and default to ghostty |
 | LPT-010 | Implemented | select-renderer tests fall back to xterm when Ghostty fails |
+| LPT-011 | Implemented | live session client and refreshHostSessions remount tests |
+| LPT-012 | Implemented | TerminalPanel Empty composition and contract test |
+| LPT-013 | Implemented | panel attaches listeners before create; Ghostty theme is explicit hex |
 | LPT-SPEC-001 | Implemented | spec/book.toml |
 | LPT-SPEC-002 | Implemented | spec-validator mapped spec-first rules |
 | LPT-SPEC-003 | Implemented | one verification row per ID |

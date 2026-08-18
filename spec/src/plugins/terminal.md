@@ -17,3 +17,6 @@ workspace bottom panel.
 | LPT-008 | The plugin MUST own Ghostty WASM and xterm.js renderers. It MUST NOT import `@lapismd/terminal-host`. Both renderers MUST share the session client and host byte stream. |
 | LPT-009 | The plugin MUST persist `terminal.renderer` as `ghostty` or `xterm`. The default MUST be `ghostty`. A change MUST remount live panels. |
 | LPT-010 | When Ghostty WASM fails to load or construct, the panel MUST fall back to xterm for that session and show a non-fatal status. Plugin load MUST NOT fail. |
+| LPT-011 | The session client MUST read the current `terminal-runtime` capability on each use. When that capability becomes available, live panels MUST remount. |
+| LPT-012 | Unavailable and error Terminal panels MUST compose `@lapismd/design-core/shadcn/empty` with a title, description, and icon. They MUST keep the existing unavailable and error test ids. |
+| LPT-013 | The panel MUST subscribe to session output before create or reuse, and Ghostty MUST use an explicit high-contrast theme so typed input remains visible. |
