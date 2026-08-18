@@ -60,6 +60,16 @@
         await renderer.mount(element);
         let boundSessionId = activeSessionId;
         const pendingOutput: Array<{ id: string; text: string }> = [];
+        const closeBoundSession = (id?: string | null) => {
+          if (cancelled || !boundSessionId) return;
+          if (id && id !== boundSessionId) return;
+          onSessionExit?.();
+        };
+        const keepAlive = (task: Promise<void>) => {
+          void task.catch((error: unknown) => {
+            if (isUnavailableSession(error)) closeBoundSession();
+          });
+        };
         const writeBound = (id: string, text: string) => {
           if (boundSessionId) {
             if (id === boundSessionId) renderer?.write(text);
@@ -69,14 +79,16 @@
         };
         detach.push(
           renderer.onData((data) => {
-            if (boundSessionId) void plugin.sessions.write(boundSessionId, data);
+            if (boundSessionId) keepAlive(plugin.sessions.write(boundSessionId, data));
           }),
           renderer.onResize(({ cols, rows }) => {
-            if (boundSessionId) void plugin.sessions.resize(boundSessionId, cols, rows);
+            if (boundSessionId) {
+              keepAlive(plugin.sessions.resize(boundSessionId, cols, rows));
+            }
           }),
           plugin.sessions.onOutput(writeBound),
           plugin.sessions.onExit((id) => {
-            if (id === boundSessionId && !cancelled) onSessionExit?.();
+            closeBoundSession(id);
           }),
         );
         const createSession = async () => {
@@ -113,6 +125,10 @@
       for (const dispose of detach) dispose();
       renderer?.dispose();
     };
+  }
+
+  function isUnavailableSession(error: unknown): boolean {
+    return error instanceof Error && /unavailable|closed/i.test(error.message);
   }
 </script>
 

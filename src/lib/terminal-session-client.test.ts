@@ -25,6 +25,8 @@ describe("createFakeTerminalSessionClient", () => {
     expect(source).toContain("get available()");
     expect(source).toContain("resolveHostBridge()");
     expect(source).toContain("requireLiveSession");
+    expect(source).toContain("subscribeTerminalEvent");
+    expect(source).toContain("onTerminalExit");
     expect(source).not.toMatch(
       /const available = hasNativeDesktopCapability\("terminal-runtime"\)/u,
     );

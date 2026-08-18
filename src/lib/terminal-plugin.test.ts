@@ -50,6 +50,9 @@ describe("TerminalPlugin contracts", () => {
     expect(panel).toContain("resolveTerminalCreateOptions");
     expect(panel).toContain("createSession");
     expect(panel).toContain("onSessionExit");
+    expect(panel).toContain("keepAlive");
+    expect(panel).toContain("closeBoundSession");
+    expect(panel).toContain("isUnavailableSession");
     expect(panel).not.toContain("process exited");
     expect(panel).toContain(
       "padding: var(--ui-workspace-explorer-content-padding, 0.5rem)",
@@ -66,6 +69,8 @@ describe("TerminalPlugin contracts", () => {
     const view = readFileSync(resolve(sourceRoot, "terminal-view.ts"), "utf8");
     expect(view).toContain("onSessionExit");
     expect(view).toContain("this.leaf.detach()");
+    expect(view).toContain("requestSaveLayout");
+    expect(view).toContain("close-terminal-session");
     expect(view).toContain("square-terminal");
   });
 });

@@ -47,18 +47,25 @@ export function createHostTerminalSessionClient(): TerminalSessionClient {
       });
     },
     onOutput(listener) {
-      const subscribe = resolveHostBridge()?.onTerminalOutput;
-      if (!subscribe) return () => {};
-      return subscribe((event) => {
+      return subscribeTerminalEvent("onTerminalOutput", (event) => {
         listener(event.sessionId, base64ToText(event.data));
       });
     },
     onExit(listener) {
-      const subscribe = resolveHostBridge()?.onTerminalExit;
-      if (!subscribe) return () => {};
-      return subscribe((event) => listener(event.sessionId, event.code));
+      return subscribeTerminalEvent("onTerminalExit", (event) => {
+        listener(event.sessionId, event.code);
+      });
     },
   };
+}
+
+function subscribeTerminalEvent<K extends "onTerminalOutput" | "onTerminalExit">(
+  method: K,
+  listener: (event: { sessionId: string; data: string; code: number | null }) => void,
+): () => void {
+  const subscribe = resolveHostBridge()?.[method];
+  if (typeof subscribe !== "function") return () => {};
+  return subscribe((event) => listener(event as { sessionId: string; data: string; code: number | null }));
 }
 
 function resolveHostBridge() {
