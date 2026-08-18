@@ -1,0 +1,11 @@
+{
+  "id": "terminal",
+  "name": "Terminal",
+  "version": "0.1.0",
+  "minAppVersion": "0.0.1",
+  "description": "Interactive shell sessions in the workspace bottom panel.",
+  "author": "Lapis Notes",
+  "distribution": "first-party-external",
+  "provenance": "official",
+  "enabledByDefault": true
+}

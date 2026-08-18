@@ -1,0 +1,14 @@
+node_modules/
+dist/
+storybook-static/
+.spec-book/
+spec/book/
+.qmd/index.sqlite*
+coverage/
+test-results/
+*.tsbuildinfo
+*.log
+.DS_Store
+AGENTS.override.md
+.cursor/
+.svelte-kit/

@@ -1,0 +1,69 @@
+{
+  "name": "@lapis-notes/lapis-plugin-terminal",
+  "version": "0.1.0",
+  "description": "Lapis Notes interactive terminal panel",
+  "license": "AGPL-3.0-or-later",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "pnpm run prepack",
+    "check": "pnpm spec:validate && pnpm check:app-ownership && pnpm check:svelte && pnpm check:types",
+    "check:app-ownership": "vitest run --project unit src/lib/application-ownership.test.ts",
+    "check:svelte": "svelte-check --tsconfig ./tsconfig.app.json --fail-on-warnings --output human",
+    "check:types": "tsc -p tsconfig.node.json --noEmit",
+    "test": "vitest run --project unit --passWithNoTests",
+    "publint": "publint",
+    "prepack": "svelte-package --tsconfig ./tsconfig.pack.json && node scripts/copy-ghostty-wasm.mjs && publint",
+    "spec:build": "spec-validator build",
+    "spec:check": "spec-validator check && pnpm check:app-ownership",
+    "spec:first": "spec-validator first",
+    "spec:validate": "spec-validator validate"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*",
+    "!dist/**/*.spec.*",
+    "!dist/**/*.stories.*"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "svelte": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./ghostty-vt.wasm": "./dist/ghostty-vt.wasm"
+  },
+  "peerDependencies": {
+    "@lapis-notes/api": "^0.0.1",
+    "@lapismd/design-core": "^0.1.0",
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "@lapis-notes/api": "0.0.1",
+    "@lapismd/design-core": "0.1.0",
+    "@lapismd/spec-validator": "0.1.0",
+    "@sveltejs/package": "2.5.0",
+    "@sveltejs/vite-plugin-svelte": "5.1.1",
+    "@tsconfig/svelte": "5.0.5",
+    "publint": "0.3.12",
+    "svelte": "5.56.9",
+    "svelte-check": "4.3.1",
+    "typescript": "~5.8.3",
+    "vite": "6.4.2",
+    "vitest": "4.1.8"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "ghostty-web": "^0.4.0"
+  }
+}

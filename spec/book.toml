@@ -1,0 +1,10 @@
+[book]
+title = "Terminal Plugin Specification"
+authors = ["LapisMD contributors"]
+description = "Canonical requirements for @lapis-notes/lapis-plugin-terminal."
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = false
