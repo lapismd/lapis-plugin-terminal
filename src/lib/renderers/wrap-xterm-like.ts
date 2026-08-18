@@ -26,6 +26,9 @@ export type FitLikeAddon = {
   dispose(): void;
 };
 
+export const FIT_RESIZE_DEBOUNCE_MS = 100;
+const GHOSTTY_WRITE_CHUNK = 4096;
+
 type EventSubscription = { dispose(): void } | (() => void) | void;
 
 export function wrapXtermLikeRenderer(
@@ -35,6 +38,7 @@ export function wrapXtermLikeRenderer(
 ): TerminalRenderer {
   const dataListeners = new Set<(data: string) => void>();
   const resizeListeners = new Set<(size: TerminalRendererSize) => void>();
+  let lastSize: TerminalRendererSize | null = null;
   let opened = false;
   let disposed = false;
   const subscriptions: Array<() => void> = [];
@@ -50,13 +54,12 @@ export function wrapXtermLikeRenderer(
       terminal.open(element);
       opened = true;
       applyHostTheme(kind, element, terminal, true);
-      fit.fit();
-      fit.observeResize?.();
       subscriptions.push(
         subscribe(terminal.onData, (data) => {
           for (const listener of dataListeners) listener(data);
         }),
         subscribe(terminal.onResize, (size) => {
+          lastSize = size;
           for (const listener of resizeListeners) listener(size);
         }),
         observeHostResize(element, () => {
@@ -64,6 +67,7 @@ export function wrapXtermLikeRenderer(
         }),
         observeHostTheme(kind, element, terminal),
       );
+      fit.fit();
       terminal.focus?.();
     },
     dispose() {
@@ -75,7 +79,12 @@ export function wrapXtermLikeRenderer(
       opened = false;
     },
     write(bytes) {
-      if (!disposed && opened) terminal.write(bytes);
+      if (disposed || !opened) return;
+      try {
+        writeChunked(terminal, bytes);
+      } catch (error) {
+        if (!isRangeError(error)) throw error;
+      }
     },
     resize(cols, rows) {
       if (!disposed && opened) terminal.resize(cols, rows);
@@ -88,6 +97,7 @@ export function wrapXtermLikeRenderer(
     },
     onResize(listener) {
       resizeListeners.add(listener);
+      if (lastSize) listener(lastSize);
       return () => {
         resizeListeners.delete(listener);
       };
@@ -105,13 +115,48 @@ function subscribe<T>(
   return () => {};
 }
 
+function writeChunked(
+  terminal: XtermLikeTerminal,
+  bytes: string | Uint8Array,
+): void {
+  if (typeof bytes === "string") {
+    if (bytes.length <= GHOSTTY_WRITE_CHUNK) {
+      terminal.write(bytes);
+      return;
+    }
+    for (let index = 0; index < bytes.length; index += GHOSTTY_WRITE_CHUNK) {
+      terminal.write(bytes.slice(index, index + GHOSTTY_WRITE_CHUNK));
+    }
+    return;
+  }
+  if (bytes.byteLength <= GHOSTTY_WRITE_CHUNK) {
+    terminal.write(bytes);
+    return;
+  }
+  for (let index = 0; index < bytes.byteLength; index += GHOSTTY_WRITE_CHUNK) {
+    terminal.write(bytes.subarray(index, index + GHOSTTY_WRITE_CHUNK));
+  }
+}
+
+function isRangeError(error: unknown): boolean {
+  return error instanceof RangeError ||
+    (error instanceof Error && /offset is out of bounds/i.test(error.message));
+}
+
 function observeHostResize(element: HTMLElement, onResize: () => void): () => void {
   if (typeof ResizeObserver === "undefined") {
     return () => {};
   }
-  const observer = new ResizeObserver(() => onResize());
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const observer = new ResizeObserver(() => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(onResize, FIT_RESIZE_DEBOUNCE_MS);
+  });
   observer.observe(element);
-  return () => observer.disconnect();
+  return () => {
+    if (timer) clearTimeout(timer);
+    observer.disconnect();
+  };
 }
 
 function observeHostTheme(

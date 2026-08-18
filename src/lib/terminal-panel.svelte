@@ -59,6 +59,8 @@
         fallbackStatus = selected.fallbackReason;
         await renderer.mount(element);
         let boundSessionId = activeSessionId;
+        let fitted = { cols: 80, rows: 24 };
+        let lastSent = { cols: 0, rows: 0 };
         const pendingOutput: Array<{ id: string; text: string }> = [];
         const closeBoundSession = (id?: string | null) => {
           if (cancelled || !boundSessionId) return;
@@ -69,6 +71,12 @@
           void task.catch((error: unknown) => {
             if (isUnavailableSession(error)) closeBoundSession();
           });
+        };
+        const sendResize = (cols: number, rows: number) => {
+          if (!boundSessionId || cols < 2 || rows < 1) return;
+          if (cols === lastSent.cols && rows === lastSent.rows) return;
+          lastSent = { cols, rows };
+          keepAlive(plugin.sessions.resize(boundSessionId, cols, rows));
         };
         const writeBound = (id: string, text: string) => {
           if (boundSessionId) {
@@ -82,9 +90,8 @@
             if (boundSessionId) keepAlive(plugin.sessions.write(boundSessionId, data));
           }),
           renderer.onResize(({ cols, rows }) => {
-            if (boundSessionId) {
-              keepAlive(plugin.sessions.resize(boundSessionId, cols, rows));
-            }
+            fitted = { cols, rows };
+            sendResize(cols, rows);
           }),
           plugin.sessions.onOutput(writeBound),
           plugin.sessions.onExit((id) => {
@@ -93,18 +100,24 @@
         );
         const createSession = async () => {
           const created = await plugin.sessions.create(
-            resolveTerminalCreateOptions(plugin.getSettings(), app ?? application),
+            resolveTerminalCreateOptions(
+              plugin.getSettings(),
+              app ?? application,
+              fitted,
+            ),
           );
           if (cancelled) return;
           boundSessionId = created.sessionId;
           activeSessionId = created.sessionId;
+          lastSent = fitted;
           onSessionId(created.sessionId);
         };
         if (!boundSessionId) {
           await createSession();
         } else {
           try {
-            await plugin.sessions.resize(boundSessionId, 80, 24);
+            await plugin.sessions.resize(boundSessionId, fitted.cols, fitted.rows);
+            lastSent = fitted;
           } catch {
             if (!cancelled) await createSession();
           }

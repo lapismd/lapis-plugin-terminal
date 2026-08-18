@@ -19,6 +19,7 @@
 | LPT-017 | Implemented | panel createSession runs when persisted resize/attach throws |
 | LPT-015 | Implemented | settings persist shell and cwd; panel create sends them; live panel uses workspace content padding; empty states stay flush; square-terminal icon |
 | LPT-016 | Implemented | TerminalView detaches its leaf and requestSaveLayout on bound session exit or a later unavailable write/resize |
+| LPT-018 | Implemented | wrap debounce fit and chunked write; panel uses fitted size and skips unchanged host resize |
 | LPT-SPEC-001 | Implemented | spec/book.toml |
 | LPT-SPEC-002 | Implemented | spec-validator mapped spec-first rules |
 | LPT-SPEC-003 | Implemented | one verification row per ID |

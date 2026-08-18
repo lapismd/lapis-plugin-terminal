@@ -61,6 +61,14 @@ describe("TerminalPlugin contracts", () => {
     expect(panel).toContain("square-terminal");
     expect(wrap).toContain("resolveTerminalHostTheme");
     expect(wrap).toContain('kind !== "ghostty"');
+    expect(wrap).toContain("FIT_RESIZE_DEBOUNCE_MS");
+    expect(wrap).toContain("writeChunked");
+    expect(wrap).toContain("isRangeError");
+    expect(wrap).toContain("lastSize");
+    expect(panel).toContain("sendResize");
+    expect(panel).toContain("lastSent");
+    expect(panel).toContain("fitted");
+    expect(panel).not.toContain("resize(boundSessionId, 80, 24)");
     expect(ghostty).toContain("resolveTerminalHostTheme");
     expect(ghostty).not.toContain("theme: {}");
   });
