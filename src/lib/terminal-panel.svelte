@@ -7,17 +7,20 @@
   import { createSubscriber } from "svelte/reactivity";
   import type { TerminalRenderer } from "./renderers/terminal-renderer";
   import type { TerminalPlugin } from "./terminal-plugin";
+  import { resolveTerminalCreateOptions } from "./terminal-session-options";
 
   let {
     app,
     plugin,
     sessionId = null,
     onSessionId,
+    onSessionExit,
   }: {
     app?: App;
     plugin: TerminalPlugin;
     sessionId?: string | null;
     onSessionId: (sessionId: string | null) => void;
+    onSessionExit?: () => void;
   } = $props();
 
   const application = useApplicationState(untrack(() => app));
@@ -72,14 +75,14 @@
             if (boundSessionId) void plugin.sessions.resize(boundSessionId, cols, rows);
           }),
           plugin.sessions.onOutput(writeBound),
-          plugin.sessions.onExit((id, code) => {
-            if (id === boundSessionId) {
-              renderer?.write(`\r\n[process exited ${code ?? 0}]\r\n`);
-            }
+          plugin.sessions.onExit((id) => {
+            if (id === boundSessionId && !cancelled) onSessionExit?.();
           }),
         );
         if (!boundSessionId) {
-          const created = await plugin.sessions.create({ cols: 80, rows: 24 });
+          const created = await plugin.sessions.create(
+            resolveTerminalCreateOptions(plugin.getSettings(), app ?? application),
+          );
           if (cancelled) return;
           boundSessionId = created.sessionId;
           activeSessionId = created.sessionId;
@@ -115,7 +118,7 @@
   {#if !hostAvailable}
     {@render hostEmpty(
       "terminal-unavailable",
-      "terminal",
+      "square-terminal",
       "Terminal unavailable",
       plugin.sessions.reason ??
         "Start lapis-terminal-host and set the Terminal server URL and token, or use the desktop host.",
@@ -162,7 +165,7 @@
     box-sizing: border-box;
     height: 100%;
     min-height: 0;
-    padding: 0.75rem;
+    padding: 0;
     color: var(--ui-workspace-view-foreground);
     background: var(--ui-workspace-view-background);
   }
@@ -179,9 +182,13 @@
   }
 
   .terminal-surface {
+    position: relative;
     flex: 1;
     min-width: 0;
     min-height: 0;
+    color: var(--ui-workspace-view-foreground);
+    background: var(--ui-workspace-view-background);
+    caret-color: transparent;
   }
 
   p {
@@ -191,5 +198,10 @@
   :global(.terminal-surface .xterm),
   :global(.terminal-surface canvas) {
     height: 100%;
+  }
+
+  :global(.terminal-surface textarea),
+  :global(.terminal-surface [contenteditable="true"]) {
+    caret-color: transparent;
   }
 </style>

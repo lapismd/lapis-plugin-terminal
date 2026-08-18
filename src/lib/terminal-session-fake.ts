@@ -6,7 +6,13 @@ export type TerminalSessionSummary = {
 export type TerminalSessionClient = {
   available: boolean;
   reason: string | null;
-  create(options?: { cols?: number; rows?: number }): Promise<TerminalSessionSummary>;
+  create(options?: {
+    cols?: number;
+    rows?: number;
+    cwd?: string;
+    shell?: string;
+    workspace?: string;
+  }): Promise<TerminalSessionSummary>;
   write(sessionId: string, data: string): Promise<void>;
   resize(sessionId: string, cols: number, rows: number): Promise<void>;
   stop(sessionId: string): Promise<void>;

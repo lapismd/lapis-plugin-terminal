@@ -19,6 +19,7 @@ describe("TerminalPlugin contracts", () => {
     expect(source).toContain("seedDefaultTerminal");
     expect(source).toContain("registerTerminalSettings");
     expect(source).toContain("refreshHostSessions");
+    expect(source).toContain('addRibbonIcon("square-terminal"');
     expect(manifest).toContain('"ghostty-web"');
     expect(manifest).toContain('"@xterm/xterm"');
     expect(manifest).toContain('"./ghostty-vt.wasm"');
@@ -38,13 +39,28 @@ describe("TerminalPlugin contracts", () => {
     expect(panel).toContain("data-testid={testId}");
   });
 
-  it("subscribes to session output before create and keeps a Ghostty contrast theme", () => {
+  it("subscribes to session output before create and follows the host theme", () => {
     const panel = readFileSync(resolve(sourceRoot, "terminal-panel.svelte"), "utf8");
+    const wrap = readFileSync(resolve(sourceRoot, "renderers/wrap-xterm-like.ts"), "utf8");
     const ghostty = readFileSync(resolve(sourceRoot, "renderers/ghostty-engine.ts"), "utf8");
     expect(panel.indexOf("plugin.sessions.onOutput(writeBound)")).toBeLessThan(
       panel.indexOf("plugin.sessions.create"),
     );
-    expect(ghostty).toContain('background: "#1e1e1e"');
-    expect(ghostty).toContain('foreground: "#d4d4d4"');
+    expect(panel).toContain("caret-color: transparent");
+    expect(panel).toContain("resolveTerminalCreateOptions");
+    expect(panel).toContain("onSessionExit");
+    expect(panel).not.toContain("process exited");
+    expect(panel).toContain("padding: 0");
+    expect(panel).toContain("square-terminal");
+    expect(wrap).toContain("resolveTerminalHostTheme");
+    expect(wrap).toContain("needsFullPaint");
+    expect(ghostty).not.toContain("#1e1e1e");
+  });
+
+  it("closes the owning leaf when the bound session exits", () => {
+    const view = readFileSync(resolve(sourceRoot, "terminal-view.ts"), "utf8");
+    expect(view).toContain("onSessionExit");
+    expect(view).toContain("this.leaf.detach()");
+    expect(view).toContain("square-terminal");
   });
 });

@@ -3,9 +3,17 @@ import { getWorkspaceHostBinding } from "@lapis-notes/api/workspace-host";
 import type { TerminalPlugin } from "./terminal-plugin";
 import {
   DEFAULT_TERMINAL_RENDERER,
+  TERMINAL_CWD_SETTING_ID,
   TERMINAL_RENDERER_SETTING_ID,
+  TERMINAL_SHELL_SETTING_ID,
   parseTerminalRendererId,
 } from "./terminal-settings";
+
+const SETTING_IDS = new Set([
+  TERMINAL_RENDERER_SETTING_ID,
+  TERMINAL_SHELL_SETTING_ID,
+  TERMINAL_CWD_SETTING_ID,
+]);
 
 export function registerTerminalSettings(plugin: TerminalPlugin & Plugin): void {
   let binding: ReturnType<typeof getWorkspaceHostBinding>;
@@ -23,8 +31,8 @@ export function registerTerminalSettings(plugin: TerminalPlugin & Plugin): void 
     controller.registerSettingsSection({
       id: "terminal",
       title: "Terminal",
-      description: "Interactive shell renderer.",
-      icon: "terminal",
+      description: "Interactive shell renderer, start directory, and shell binary.",
+      icon: "square-terminal",
       order: 45,
       navigationGroupId: "core-plugins",
       sourcePluginId: plugin.id,
@@ -41,17 +49,39 @@ export function registerTerminalSettings(plugin: TerminalPlugin & Plugin): void 
             { value: "xterm", label: "xterm.js" },
           ],
         },
+        {
+          id: TERMINAL_SHELL_SETTING_ID,
+          type: "string" as const,
+          title: "Shell path",
+          description:
+            "Absolute shell binary. Leave empty to use $SHELL or the Windows command processor.",
+          default: "",
+          placeholder: "/bin/zsh",
+        },
+        {
+          id: TERMINAL_CWD_SETTING_ID,
+          type: "string" as const,
+          title: "Start directory",
+          description:
+            "Directory for new sessions. Leave empty to use the vault on desktop or the terminal-host workspace on web.",
+          default: "",
+          placeholder: "notes",
+        },
       ],
     }),
   );
   controller.settings.update(TERMINAL_RENDERER_SETTING_ID, settings.renderer);
+  controller.settings.update(TERMINAL_SHELL_SETTING_ID, settings.shell);
+  controller.settings.update(TERMINAL_CWD_SETTING_ID, settings.cwd);
 
   const changeRef = controller.settings.on("change", (event) => {
-    if (event.id !== TERMINAL_RENDERER_SETTING_ID) return;
-    const value = parseTerminalRendererId(
-      controller.settings.getSnapshot().values[TERMINAL_RENDERER_SETTING_ID],
-    );
-    void plugin.updateSettings({ renderer: value });
+    if (typeof event.id !== "string" || !SETTING_IDS.has(event.id)) return;
+    const values = controller.settings.getSnapshot().values;
+    void plugin.updateSettings({
+      renderer: parseTerminalRendererId(values[TERMINAL_RENDERER_SETTING_ID]),
+      shell: String(values[TERMINAL_SHELL_SETTING_ID] ?? ""),
+      cwd: String(values[TERMINAL_CWD_SETTING_ID] ?? ""),
+    });
   });
   plugin.register(() => controller.settings.offref(changeRef));
 }

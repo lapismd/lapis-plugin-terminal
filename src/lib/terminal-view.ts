@@ -24,7 +24,7 @@ export class TerminalView extends View {
   }
 
   getIcon(): string {
-    return "terminal";
+    return "square-terminal";
   }
 
   getState(): Record<string, unknown> {
@@ -56,6 +56,9 @@ export class TerminalView extends View {
         sessionId: this.#sessionId,
         onSessionId: (sessionId: string | null) => {
           this.#sessionId = sessionId;
+        },
+        onSessionExit: () => {
+          this.leaf.detach();
         },
       },
     }) as Record<string, unknown>;

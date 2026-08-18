@@ -19,4 +19,7 @@ workspace bottom panel.
 | LPT-010 | When Ghostty WASM fails to load or construct, the panel MUST fall back to xterm for that session and show a non-fatal status. Plugin load MUST NOT fail. |
 | LPT-011 | The session client MUST read the current `terminal-runtime` capability on each use. When that capability becomes available, live panels MUST remount. |
 | LPT-012 | Unavailable and error Terminal panels MUST compose `@lapismd/design-core/shadcn/empty` with a title, description, and icon. They MUST keep the existing unavailable and error test ids. |
-| LPT-013 | The panel MUST subscribe to session output before create or reuse, and Ghostty MUST use an explicit high-contrast theme so typed input remains visible. |
+| LPT-013 | The panel MUST subscribe to session output before create or reuse so restore and early echoes remain visible. |
+| LPT-014 | Ghostty and xterm MUST paint with the selected host workspace view colors. They MUST NOT keep a hardcoded dark canvas when the theme is light, MUST hide helper and contenteditable carets on the surface, and MUST fully refresh after the first host snapshot so a leftover origin cursor is not left on the canvas. |
+| LPT-015 | The plugin MUST persist optional `terminal.shell` and `terminal.cwd`. Empty shell MUST use the host default. Empty cwd MUST use the desktop vault path when available, otherwise the host workspace. Live sessions MUST send those values on create. The live Ghostty surface MUST fill the leaf without extra padding. Plugin chrome MUST use the `square-terminal` icon. |
+| LPT-016 | When the bound host session exits, the owning `terminal` leaf MUST close. The panel MUST NOT keep an in-place process-exited banner. |

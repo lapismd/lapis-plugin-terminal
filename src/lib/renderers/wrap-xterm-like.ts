@@ -1,3 +1,4 @@
+import { resolveTerminalHostTheme, type TerminalHostTheme } from "./host-theme";
 import type {
   TerminalRenderer,
   TerminalRendererKind,
@@ -13,6 +14,10 @@ export type XtermLikeTerminal = {
   onData: (listener: (data: string) => void) => EventSubscription;
   onResize: (listener: (size: TerminalRendererSize) => void) => EventSubscription;
   focus?: () => void;
+  cols?: number;
+  rows?: number;
+  options?: { theme?: Partial<TerminalHostTheme> };
+  renderer?: { setTheme?(theme: TerminalHostTheme): void };
 };
 
 export type FitLikeAddon = {
@@ -32,6 +37,7 @@ export function wrapXtermLikeRenderer(
   const resizeListeners = new Set<(size: TerminalRendererSize) => void>();
   let opened = false;
   let disposed = false;
+  let needsFullPaint = true;
   const subscriptions: Array<() => void> = [];
 
   return {
@@ -44,6 +50,7 @@ export function wrapXtermLikeRenderer(
       terminal.loadAddon(fit as never);
       terminal.open(element);
       opened = true;
+      applyHostTheme(element, terminal);
       fit.fit();
       fit.observeResize?.();
       subscriptions.push(
@@ -56,6 +63,7 @@ export function wrapXtermLikeRenderer(
         observeHostResize(element, () => {
           if (!disposed) fit.fit();
         }),
+        observeHostTheme(element, terminal),
       );
       terminal.focus?.();
     },
@@ -68,7 +76,14 @@ export function wrapXtermLikeRenderer(
       opened = false;
     },
     write(bytes) {
-      if (!disposed && opened) terminal.write(bytes);
+      if (disposed || !opened) return;
+      terminal.write(bytes, () => {
+        if (disposed) return;
+        if (needsFullPaint) {
+          needsFullPaint = false;
+          refreshRenderer(terminal);
+        }
+      });
     },
     resize(cols, rows) {
       if (!disposed && opened) terminal.resize(cols, rows);
@@ -107,34 +122,49 @@ function observeHostResize(element: HTMLElement, onResize: () => void): () => vo
   return () => observer.disconnect();
 }
 
+function observeHostTheme(
+  element: HTMLElement,
+  terminal: XtermLikeTerminal,
+): () => void {
+  if (typeof MutationObserver === "undefined" || !element.ownerDocument) {
+    return () => {};
+  }
+  let lastKey = themeKey(resolveTerminalHostTheme(element));
+  const apply = () => {
+    const next = themeKey(resolveTerminalHostTheme(element));
+    if (next === lastKey) return;
+    lastKey = next;
+    applyHostTheme(element, terminal);
+    refreshRenderer(terminal);
+  };
+  const observer = new MutationObserver(apply);
+  observer.observe(element.ownerDocument.documentElement, {
+    attributes: true,
+    attributeFilter: ["class", "data-theme", "style"],
+  });
+  return () => observer.disconnect();
+}
+
 function applyHostTheme(
   element: HTMLElement,
   terminal: XtermLikeTerminal,
 ): void {
-  if (typeof getComputedStyle !== "function") return;
-  const styles = getComputedStyle(element);
-  const options = (
-    terminal as XtermLikeTerminal & {
-      options?: { theme?: { background?: string; foreground?: string } };
-    }
-  ).options;
-  if (!options?.theme) return;
-  const background = parseCssColor(styles.backgroundColor);
-  const foreground = parseCssColor(styles.color);
-  if (!background || !foreground || background === foreground) return;
-  options.theme.background = background;
-  options.theme.foreground = foreground;
+  const theme = resolveTerminalHostTheme(element);
+  if (!theme) return;
+  terminal.options ??= {};
+  terminal.options.theme = {
+    ...terminal.options.theme,
+    ...theme,
+  };
+  terminal.renderer?.setTheme?.(theme);
 }
 
-function parseCssColor(value: string): string | null {
-  if (!value) return null;
-  if (value.startsWith("#") && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/iu.test(value)) {
-    return value;
-  }
-  const rgb = value.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/u);
-  if (!rgb) return null;
-  const hex = [rgb[1], rgb[2], rgb[3]]
-    .map((part) => Number(part).toString(16).padStart(2, "0"))
-    .join("");
-  return `#${hex}`;
+function refreshRenderer(terminal: XtermLikeTerminal): void {
+  const cols = terminal.cols ?? 80;
+  const rows = terminal.rows ?? 24;
+  terminal.resize(cols, rows);
+}
+
+function themeKey(theme: TerminalHostTheme | null): string {
+  return theme ? `${theme.background}:${theme.foreground}` : "";
 }

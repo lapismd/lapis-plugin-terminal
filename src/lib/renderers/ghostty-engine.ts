@@ -14,11 +14,7 @@ export async function createGhosttyRenderer(): Promise<TerminalRenderer> {
     cursorBlink: true,
     fontSize: 13,
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-    theme: {
-      background: "#1e1e1e",
-      foreground: "#d4d4d4",
-      cursor: "#d4d4d4",
-    },
+    theme: {},
   });
   return wrapXtermLikeRenderer(
     "ghostty",

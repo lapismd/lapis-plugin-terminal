@@ -128,7 +128,7 @@ export class TerminalPlugin extends Plugin {
       name: "New Terminal",
       callback: () => void this.createTerminal(),
     });
-    this.addRibbonIcon("terminal", "Open Terminal", () => {
+    this.addRibbonIcon("square-terminal", "Open Terminal", () => {
       void this.openTerminal();
     });
     this.app.workspace.onLayoutReady(() => {
