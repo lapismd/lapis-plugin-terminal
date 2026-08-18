@@ -1,3 +1,4 @@
+import { resolveTerminalHostTheme } from "./host-theme";
 import type { TerminalRenderer } from "./terminal-renderer";
 import { wrapXtermLikeRenderer, type XtermLikeTerminal } from "./wrap-xterm-like";
 
@@ -14,7 +15,9 @@ export async function createGhosttyRenderer(): Promise<TerminalRenderer> {
     cursorBlink: true,
     fontSize: 13,
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-    theme: {},
+    theme: resolveTerminalHostTheme(
+      typeof document !== "undefined" ? document.documentElement : null,
+    ),
   });
   return wrapXtermLikeRenderer(
     "ghostty",

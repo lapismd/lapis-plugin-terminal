@@ -48,13 +48,18 @@ describe("TerminalPlugin contracts", () => {
     );
     expect(panel).toContain("caret-color: transparent");
     expect(panel).toContain("resolveTerminalCreateOptions");
+    expect(panel).toContain("createSession");
     expect(panel).toContain("onSessionExit");
     expect(panel).not.toContain("process exited");
-    expect(panel).toContain("padding: 0");
+    expect(panel).toContain(
+      "padding: var(--ui-workspace-explorer-content-padding, 0.5rem)",
+    );
+    expect(panel).toContain(".terminal-panel--empty");
     expect(panel).toContain("square-terminal");
     expect(wrap).toContain("resolveTerminalHostTheme");
-    expect(wrap).toContain("needsFullPaint");
-    expect(ghostty).not.toContain("#1e1e1e");
+    expect(wrap).toContain('kind !== "ghostty"');
+    expect(ghostty).toContain("resolveTerminalHostTheme");
+    expect(ghostty).not.toContain("theme: {}");
   });
 
   it("closes the owning leaf when the bound session exits", () => {

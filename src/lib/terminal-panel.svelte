@@ -79,7 +79,7 @@
             if (id === boundSessionId && !cancelled) onSessionExit?.();
           }),
         );
-        if (!boundSessionId) {
+        const createSession = async () => {
           const created = await plugin.sessions.create(
             resolveTerminalCreateOptions(plugin.getSettings(), app ?? application),
           );
@@ -87,8 +87,15 @@
           boundSessionId = created.sessionId;
           activeSessionId = created.sessionId;
           onSessionId(created.sessionId);
+        };
+        if (!boundSessionId) {
+          await createSession();
         } else {
-          await plugin.sessions.resize(boundSessionId, 80, 24);
+          try {
+            await plugin.sessions.resize(boundSessionId, 80, 24);
+          } catch {
+            if (!cancelled) await createSession();
+          }
         }
         for (const chunk of pendingOutput) {
           if (chunk.id === boundSessionId) renderer.write(chunk.text);
@@ -165,7 +172,7 @@
     box-sizing: border-box;
     height: 100%;
     min-height: 0;
-    padding: 0;
+    padding: var(--ui-workspace-explorer-content-padding, 0.5rem);
     color: var(--ui-workspace-view-foreground);
     background: var(--ui-workspace-view-background);
   }

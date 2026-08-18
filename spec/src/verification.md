@@ -15,8 +15,9 @@
 | LPT-011 | Implemented | live session client and refreshHostSessions remount tests |
 | LPT-012 | Implemented | TerminalPanel Empty composition and contract test |
 | LPT-013 | Implemented | panel attaches listeners before create |
-| LPT-014 | Implemented | host-theme reads workspace tokens; wrap refreshes after first write; panel hides helper caret |
-| LPT-015 | Implemented | settings persist shell and cwd; panel create sends them; live panel has no padding; square-terminal icon |
+| LPT-014 | Implemented | Ghostty gets workspace theme before open; wrap does not assign options.theme after Ghostty open |
+| LPT-017 | Implemented | panel createSession runs when persisted resize/attach throws |
+| LPT-015 | Implemented | settings persist shell and cwd; panel create sends them; live panel uses workspace content padding; empty states stay flush; square-terminal icon |
 | LPT-016 | Implemented | TerminalView detaches its leaf on bound session exit |
 | LPT-SPEC-001 | Implemented | spec/book.toml |
 | LPT-SPEC-002 | Implemented | spec-validator mapped spec-first rules |

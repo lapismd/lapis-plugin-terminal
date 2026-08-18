@@ -37,7 +37,6 @@ export function wrapXtermLikeRenderer(
   const resizeListeners = new Set<(size: TerminalRendererSize) => void>();
   let opened = false;
   let disposed = false;
-  let needsFullPaint = true;
   const subscriptions: Array<() => void> = [];
 
   return {
@@ -46,11 +45,11 @@ export function wrapXtermLikeRenderer(
       if (disposed) {
         throw new Error(`${kind} renderer is disposed`);
       }
-      applyHostTheme(element, terminal);
+      applyHostTheme(kind, element, terminal, false);
       terminal.loadAddon(fit as never);
       terminal.open(element);
       opened = true;
-      applyHostTheme(element, terminal);
+      applyHostTheme(kind, element, terminal, true);
       fit.fit();
       fit.observeResize?.();
       subscriptions.push(
@@ -63,7 +62,7 @@ export function wrapXtermLikeRenderer(
         observeHostResize(element, () => {
           if (!disposed) fit.fit();
         }),
-        observeHostTheme(element, terminal),
+        observeHostTheme(kind, element, terminal),
       );
       terminal.focus?.();
     },
@@ -76,14 +75,7 @@ export function wrapXtermLikeRenderer(
       opened = false;
     },
     write(bytes) {
-      if (disposed || !opened) return;
-      terminal.write(bytes, () => {
-        if (disposed) return;
-        if (needsFullPaint) {
-          needsFullPaint = false;
-          refreshRenderer(terminal);
-        }
-      });
+      if (!disposed && opened) terminal.write(bytes);
     },
     resize(cols, rows) {
       if (!disposed && opened) terminal.resize(cols, rows);
@@ -123,6 +115,7 @@ function observeHostResize(element: HTMLElement, onResize: () => void): () => vo
 }
 
 function observeHostTheme(
+  kind: Exclude<TerminalRendererKind, "plain">,
   element: HTMLElement,
   terminal: XtermLikeTerminal,
 ): () => void {
@@ -134,8 +127,7 @@ function observeHostTheme(
     const next = themeKey(resolveTerminalHostTheme(element));
     if (next === lastKey) return;
     lastKey = next;
-    applyHostTheme(element, terminal);
-    refreshRenderer(terminal);
+    applyHostTheme(kind, element, terminal, true);
   };
   const observer = new MutationObserver(apply);
   observer.observe(element.ownerDocument.documentElement, {
@@ -146,25 +138,22 @@ function observeHostTheme(
 }
 
 function applyHostTheme(
+  kind: Exclude<TerminalRendererKind, "plain">,
   element: HTMLElement,
   terminal: XtermLikeTerminal,
+  opened: boolean,
 ): void {
   const theme = resolveTerminalHostTheme(element);
-  if (!theme) return;
-  terminal.options ??= {};
-  terminal.options.theme = {
-    ...terminal.options.theme,
-    ...theme,
-  };
-  terminal.renderer?.setTheme?.(theme);
+  if (!opened || kind !== "ghostty") {
+    terminal.options ??= {};
+    terminal.options.theme = {
+      ...terminal.options.theme,
+      ...theme,
+    };
+  }
+  if (opened) terminal.renderer?.setTheme?.(theme);
 }
 
-function refreshRenderer(terminal: XtermLikeTerminal): void {
-  const cols = terminal.cols ?? 80;
-  const rows = terminal.rows ?? 24;
-  terminal.resize(cols, rows);
-}
-
-function themeKey(theme: TerminalHostTheme | null): string {
-  return theme ? `${theme.background}:${theme.foreground}` : "";
+function themeKey(theme: TerminalHostTheme): string {
+  return `${theme.background}:${theme.foreground}`;
 }

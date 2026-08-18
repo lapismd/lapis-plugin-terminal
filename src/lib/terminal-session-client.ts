@@ -25,17 +25,21 @@ export function createHostTerminalSessionClient(): TerminalSessionClient {
       );
     },
     async write(sessionId, data) {
-      await resolveRequiredBridge().invoke("desktop_terminal_session_write", {
-        sessionId,
-        data: bytesToBase64(data),
-      });
+      requireLiveSession(
+        await resolveRequiredBridge().invoke("desktop_terminal_session_write", {
+          sessionId,
+          data: bytesToBase64(data),
+        }),
+      );
     },
     async resize(sessionId, cols, rows) {
-      await resolveRequiredBridge().invoke("desktop_terminal_session_resize", {
-        sessionId,
-        cols,
-        rows,
-      });
+      requireLiveSession(
+        await resolveRequiredBridge().invoke("desktop_terminal_session_resize", {
+          sessionId,
+          cols,
+          rows,
+        }),
+      );
     },
     async stop(sessionId) {
       await resolveRequiredBridge().invoke("desktop_terminal_session_stop", {
@@ -60,6 +64,20 @@ export function createHostTerminalSessionClient(): TerminalSessionClient {
 function resolveHostBridge() {
   if (!hasNativeDesktopCapability("terminal-runtime")) return null;
   return getNativeDesktopBridge();
+}
+
+function requireLiveSession(result: unknown): void {
+  if (result === false) {
+    throw new Error("Terminal session is unavailable");
+  }
+  if (
+    result &&
+    typeof result === "object" &&
+    "ok" in result &&
+    (result as { ok?: unknown }).ok === false
+  ) {
+    throw new Error("Terminal session is unavailable");
+  }
 }
 
 function resolveRequiredBridge() {

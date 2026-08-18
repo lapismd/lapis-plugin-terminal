@@ -10,33 +10,80 @@ export type TerminalHostTheme = {
 const VIEW_BACKGROUND = "--ui-workspace-view-background";
 const VIEW_FOREGROUND = "--ui-workspace-view-foreground";
 
+const LIGHT_THEME: TerminalHostTheme = {
+  background: "#ffffff",
+  foreground: "#222222",
+  cursor: "#222222",
+  cursorAccent: "#ffffff",
+  selectionBackground: "#222222",
+  selectionForeground: "#ffffff",
+};
+
+const DARK_THEME: TerminalHostTheme = {
+  background: "#1e1e1e",
+  foreground: "#d4d4d4",
+  cursor: "#d4d4d4",
+  cursorAccent: "#1e1e1e",
+  selectionBackground: "#d4d4d4",
+  selectionForeground: "#1e1e1e",
+};
+
 export function resolveTerminalHostTheme(
-  element: HTMLElement,
-): TerminalHostTheme | null {
-  if (typeof getComputedStyle !== "function") return null;
-  const styles = getComputedStyle(element);
-  const parentStyles = element.parentElement
-    ? getComputedStyle(element.parentElement)
-    : styles;
-  const background =
-    cssColorToHex(styles.getPropertyValue(VIEW_BACKGROUND)) ??
-    cssColorToHex(parentStyles.getPropertyValue(VIEW_BACKGROUND)) ??
-    cssColorToHex(styles.backgroundColor) ??
-    cssColorToHex(parentStyles.backgroundColor);
-  const foreground =
-    cssColorToHex(styles.getPropertyValue(VIEW_FOREGROUND)) ??
-    cssColorToHex(parentStyles.getPropertyValue(VIEW_FOREGROUND)) ??
-    cssColorToHex(styles.color) ??
-    cssColorToHex(parentStyles.color);
-  if (!background || !foreground || background === foreground) return null;
-  return {
-    background,
-    foreground,
-    cursor: foreground,
-    cursorAccent: background,
-    selectionBackground: foreground,
-    selectionForeground: background,
-  };
+  element?: HTMLElement | null,
+): TerminalHostTheme {
+  if (typeof getComputedStyle !== "function") {
+    return LIGHT_THEME;
+  }
+  const root =
+    element?.ownerDocument?.documentElement ??
+    (typeof document !== "undefined" ? document.documentElement : null);
+  const sources = [element, element?.parentElement, root].filter(
+    (node): node is HTMLElement => Boolean(node),
+  );
+  let background: string | null = null;
+  let foreground: string | null = null;
+  for (const node of sources) {
+    const styles = getComputedStyle(node);
+    background ??=
+      cssColorToHex(styles.getPropertyValue(VIEW_BACKGROUND)) ??
+      cssColorToHex(styles.backgroundColor);
+    foreground ??=
+      cssColorToHex(styles.getPropertyValue(VIEW_FOREGROUND)) ??
+      cssColorToHex(styles.color);
+    if (background && foreground && background !== foreground) break;
+  }
+  if (background && foreground && background !== foreground) {
+    return {
+      background,
+      foreground,
+      cursor: foreground,
+      cursorAccent: background,
+      selectionBackground: foreground,
+      selectionForeground: background,
+    };
+  }
+  return fallbackTerminalHostTheme(root ?? element);
+}
+
+export function fallbackTerminalHostTheme(
+  element?: HTMLElement | null,
+): TerminalHostTheme {
+  return isDarkTheme(element) ? DARK_THEME : LIGHT_THEME;
+}
+
+function isDarkTheme(element?: HTMLElement | null): boolean {
+  const root =
+    element?.ownerDocument?.documentElement ??
+    element ??
+    (typeof document !== "undefined" ? document.documentElement : null);
+  if (!root) return false;
+  const theme = root.getAttribute("data-theme") ?? "";
+  const className = root.className.toString();
+  return (
+    theme === "dark" ||
+    className.includes("theme-dark") ||
+    /(^|\s)dark(\s|$)/u.test(className)
+  );
 }
 
 export function cssColorToHex(value: string): string | null {
