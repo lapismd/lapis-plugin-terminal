@@ -31,3 +31,5 @@ This repository owns the first-party external Lapis plugin whose runtime ID is
 ## Version control
 
 - Use Jujutsu for status, diffs, commits, bookmarks, and history work.
+- After each verified slice, commit with a PR-quality message. This is a
+  standing request; do not wait for the user to ask.
