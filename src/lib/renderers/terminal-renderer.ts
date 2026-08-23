@@ -1,6 +1,4 @@
-export type TerminalRendererId = "ghostty" | "xterm";
-
-export type TerminalRendererKind = TerminalRendererId | "plain";
+export type TerminalRendererKind = "ghostty" | "plain";
 
 export type TerminalRendererSize = {
   cols: number;
@@ -17,13 +15,4 @@ export type TerminalRenderer = {
   onResize(listener: (size: TerminalRendererSize) => void): () => void;
 };
 
-export type TerminalRendererFactories = {
-  createGhostty: () => Promise<TerminalRenderer>;
-  createXterm: () => Promise<TerminalRenderer>;
-};
-
-export type SelectedTerminalRenderer = {
-  renderer: TerminalRenderer;
-  active: TerminalRendererKind;
-  fallbackReason: string | null;
-};
+export type TerminalRendererFactory = () => Promise<TerminalRenderer>;

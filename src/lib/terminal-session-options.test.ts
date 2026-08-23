@@ -9,7 +9,7 @@ describe("resolveTerminalCreateOptions", () => {
     expect(resolveVaultWorkspace(app)).toBe("/Users/ada/vault");
     expect(
       resolveTerminalCreateOptions(
-        { renderer: "ghostty", shell: "/bin/zsh", cwd: "notes" },
+        { shell: "/bin/zsh", cwd: "notes" },
         app,
       ),
     ).toEqual({
@@ -23,7 +23,7 @@ describe("resolveTerminalCreateOptions", () => {
 
   it("omits empty optional paths", () => {
     expect(
-      resolveTerminalCreateOptions({ renderer: "ghostty", shell: "", cwd: "" }),
+      resolveTerminalCreateOptions({ shell: "", cwd: "" }),
     ).toEqual({
       cols: 80,
       rows: 24,

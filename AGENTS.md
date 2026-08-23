@@ -5,8 +5,8 @@ This repository owns the first-party external Lapis plugin whose runtime ID is
 
 ## Ownership and compatibility
 
-- Keep terminal views, commands, Ghostty WASM and xterm presentation, and Fake
-  sessions here.
+- Keep terminal views, commands, Ghostty WASM presentation, and Fake sessions
+  here. Ghostty is the only supported VT renderer.
 - Consume host facilities only through published `@lapis-notes/api` and
   `@lapismd/design-core` exports.
 - Do not depend on `@lapismd/terminal-host` at runtime.

@@ -9,16 +9,12 @@ export type {
 } from "./terminal-session-fake";
 export { default as TerminalPanel } from "./terminal-panel.svelte";
 export { createPlainRenderer } from "./renderers/plain-renderer";
-export { selectTerminalRenderer } from "./renderers/select-renderer";
 export type {
-  SelectedTerminalRenderer,
   TerminalRenderer,
-  TerminalRendererId,
+  TerminalRendererFactory,
   TerminalRendererKind,
 } from "./renderers/terminal-renderer";
 export {
-  DEFAULT_TERMINAL_RENDERER,
-  TERMINAL_RENDERER_SETTING_ID,
   parseTerminalPluginSettings,
 } from "./terminal-settings";
 export type { TerminalPluginSettings } from "./terminal-settings";

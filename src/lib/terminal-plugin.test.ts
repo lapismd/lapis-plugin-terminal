@@ -21,7 +21,8 @@ describe("TerminalPlugin contracts", () => {
     expect(source).toContain("refreshHostSessions");
     expect(source).toContain('addRibbonIcon("square-terminal"');
     expect(manifest).toContain('"ghostty-web"');
-    expect(manifest).toContain('"@xterm/xterm"');
+    expect(manifest).not.toContain('"@xterm/xterm"');
+    expect(manifest).not.toContain('"@xterm/addon-fit"');
     expect(manifest).toContain('"./ghostty-vt.wasm"');
     expect(manifest).not.toContain("@lapismd/terminal-host");
     expect(manifest).not.toMatch(/"(?:workspace|link|file):/u);
@@ -41,7 +42,7 @@ describe("TerminalPlugin contracts", () => {
 
   it("subscribes to session output before create and follows the host theme", () => {
     const panel = readFileSync(resolve(sourceRoot, "terminal-panel.svelte"), "utf8");
-    const wrap = readFileSync(resolve(sourceRoot, "renderers/wrap-xterm-like.ts"), "utf8");
+    const wrap = readFileSync(resolve(sourceRoot, "renderers/wrap-ghostty.ts"), "utf8");
     const ghostty = readFileSync(resolve(sourceRoot, "renderers/ghostty-engine.ts"), "utf8");
     expect(panel.indexOf("plugin.sessions.onOutput(writeBound)")).toBeLessThan(
       panel.indexOf("plugin.sessions.create"),
@@ -60,7 +61,7 @@ describe("TerminalPlugin contracts", () => {
     expect(panel).toContain(".terminal-panel--empty");
     expect(panel).toContain("square-terminal");
     expect(wrap).toContain("resolveTerminalHostTheme");
-    expect(wrap).toContain('kind !== "ghostty"');
+    expect(wrap).toContain('kind: "ghostty"');
     expect(wrap).toContain("FIT_RESIZE_DEBOUNCE_MS");
     expect(wrap).toContain("writeChunked");
     expect(wrap).toContain("isRangeError");
@@ -71,6 +72,8 @@ describe("TerminalPlugin contracts", () => {
     expect(panel).not.toContain("resize(boundSessionId, 80, 24)");
     expect(ghostty).toContain("resolveTerminalHostTheme");
     expect(ghostty).not.toContain("theme: {}");
+    expect(panel).toContain("plugin.createRenderer()");
+    expect(panel).not.toContain("fallbackStatus");
   });
 
   it("closes the owning leaf when the bound session exits", () => {

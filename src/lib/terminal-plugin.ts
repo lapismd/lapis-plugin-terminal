@@ -5,21 +5,15 @@ import {
   type WorkspaceLeaf,
 } from "@lapis-notes/api";
 import { registerTerminalSettings } from "./register-terminal-settings";
-import {
-  defaultTerminalRendererFactories,
-  selectTerminalRenderer,
-} from "./renderers/select-renderer";
-import type {
-  SelectedTerminalRenderer,
-  TerminalRendererFactories,
-} from "./renderers/terminal-renderer";
+import { createGhosttyRenderer } from "./renderers/ghostty-engine";
+import type { TerminalRenderer, TerminalRendererFactory } from "./renderers/terminal-renderer";
 import {
   createFakeTerminalSessionClient,
   createHostTerminalSessionClient,
   type TerminalSessionClient,
 } from "./terminal-session-client";
 import {
-  createTerminalRendererStore,
+  createTerminalSettingsStore,
   type TerminalPluginSettings,
 } from "./terminal-settings";
 import { TerminalView } from "./terminal-view";
@@ -36,8 +30,8 @@ const MANIFEST: PluginManifest = {
 
 export class TerminalPlugin extends Plugin {
   #sessions: TerminalSessionClient;
-  #rendererStore = createTerminalRendererStore();
-  #rendererFactories: TerminalRendererFactories = defaultTerminalRendererFactories;
+  #settingsStore = createTerminalSettingsStore();
+  #rendererFactory: TerminalRendererFactory = createGhosttyRenderer;
   #hostListeners = new Set<() => void>();
   #hostGeneration = 0;
 
@@ -54,20 +48,12 @@ export class TerminalPlugin extends Plugin {
     return this.#sessions;
   }
 
-  get rendererGeneration(): number {
-    return this.#rendererStore.generation;
-  }
-
   get hostGeneration(): number {
     return this.#hostGeneration;
   }
 
   getSettings(): TerminalPluginSettings {
-    return { ...this.#rendererStore.settings };
-  }
-
-  onSettingsChange(listener: () => void): () => void {
-    return this.#rendererStore.subscribe(listener);
+    return { ...this.#settingsStore.settings };
   }
 
   onHostChange(listener: () => void): () => void {
@@ -83,33 +69,27 @@ export class TerminalPlugin extends Plugin {
   }
 
   async updateSettings(patch: Partial<TerminalPluginSettings>): Promise<void> {
-    this.#rendererStore.replace({
-      ...this.#rendererStore.settings,
+    this.#settingsStore.replace({
+      ...this.#settingsStore.settings,
       ...patch,
     });
-    await this.saveData(this.#rendererStore.settings);
+    await this.saveData(this.#settingsStore.settings);
   }
 
-  selectRenderer(
-    preferred = this.getSettings().renderer,
-  ): Promise<SelectedTerminalRenderer> {
-    return selectTerminalRenderer({
-      preferred,
-      createGhostty: this.#rendererFactories.createGhostty,
-      createXterm: this.#rendererFactories.createXterm,
-    });
+  createRenderer(): Promise<TerminalRenderer> {
+    return this.#rendererFactory();
   }
 
   useFakeSessions(): void {
     this.#sessions = createFakeTerminalSessionClient();
   }
 
-  useTestRenderers(factories: TerminalRendererFactories): void {
-    this.#rendererFactories = factories;
+  useTestRenderer(factory: TerminalRendererFactory): void {
+    this.#rendererFactory = factory;
   }
 
   async onload(): Promise<void> {
-    this.#rendererStore.hydrate(await this.loadData());
+    this.#settingsStore.hydrate(await this.loadData());
     registerTerminalSettings(this);
     this.registerView(
       TERMINAL_VIEW_TYPE,

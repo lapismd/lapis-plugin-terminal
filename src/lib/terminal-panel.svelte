@@ -25,11 +25,7 @@
 
   const application = useApplicationState(untrack(() => app));
   let error = $state<string | null>(null);
-  let fallbackStatus = $state<string | null>(null);
   let activeSessionId = $state<string | null>(untrack(() => sessionId));
-  const subscribeRendererSettings = createSubscriber((update) =>
-    plugin.onSettingsChange(update),
-  );
   const subscribeHost = createSubscriber((update) => plugin.onHostChange(update));
   let hostAvailable = $derived.by(() => {
     subscribeHost();
@@ -38,8 +34,7 @@
   let showEmpty = $derived(!hostAvailable || Boolean(error));
   let rendererKey = $derived.by(() => {
     subscribeHost();
-    subscribeRendererSettings();
-    return `${plugin.hostGeneration}:${plugin.getSettings().renderer}:${plugin.rendererGeneration}`;
+    return plugin.hostGeneration;
   });
 
   function attachRenderer(element: HTMLElement) {
@@ -48,20 +43,18 @@
     const detach: Array<() => void> = [];
 
     void (async () => {
-      fallbackStatus = null;
       try {
-        const selected = await plugin.selectRenderer();
+        const selected = await plugin.createRenderer();
         if (cancelled) {
-          selected.renderer.dispose();
+          selected.dispose();
           return;
         }
-        renderer = selected.renderer;
-        fallbackStatus = selected.fallbackReason;
+        renderer = selected;
         await renderer.mount(element);
         let boundSessionId = activeSessionId;
         let fitted = { cols: 80, rows: 24 };
         let lastSent = { cols: 0, rows: 0 };
-        const pendingOutput: Array<{ id: string; text: string }> = [];
+        const pendingOutput: Array<{ id: string; bytes: Uint8Array }> = [];
         const closeBoundSession = (id?: string | null) => {
           if (cancelled || !boundSessionId) return;
           if (id && id !== boundSessionId) return;
@@ -78,12 +71,12 @@
           lastSent = { cols, rows };
           keepAlive(plugin.sessions.resize(boundSessionId, cols, rows));
         };
-        const writeBound = (id: string, text: string) => {
+        const writeBound = (id: string, bytes: Uint8Array) => {
           if (boundSessionId) {
-            if (id === boundSessionId) renderer?.write(text);
+            if (id === boundSessionId) renderer?.write(bytes);
             return;
           }
-          pendingOutput.push({ id, text });
+          pendingOutput.push({ id, bytes });
         };
         detach.push(
           renderer.onData((data) => {
@@ -123,7 +116,7 @@
           }
         }
         for (const chunk of pendingOutput) {
-          if (chunk.id === boundSessionId) renderer.write(chunk.text);
+          if (chunk.id === boundSessionId) renderer.write(chunk.bytes);
         }
       } catch (caught: unknown) {
         if (!cancelled) {
@@ -162,9 +155,6 @@
   {:else if error}
     {@render hostEmpty("terminal-error", "circle-alert", "Unable to start terminal", error)}
   {:else}
-    {#if fallbackStatus}
-      <p data-testid="terminal-renderer-status">{fallbackStatus}</p>
-    {/if}
     {#key rendererKey}
       <div
         class="terminal-surface"
@@ -227,11 +217,6 @@
     caret-color: transparent;
   }
 
-  p {
-    margin: 0 0 0.5rem;
-  }
-
-  :global(.terminal-surface .xterm),
   :global(.terminal-surface canvas) {
     height: 100%;
   }

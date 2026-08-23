@@ -1,39 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_TERMINAL_RENDERER,
-  TERMINAL_RENDERER_SETTING_ID,
-  createTerminalRendererStore,
+  createTerminalSettingsStore,
   parseTerminalPluginSettings,
 } from "./terminal-settings";
 
-describe("terminal renderer settings", () => {
-  it("defaults to ghostty", () => {
-    expect(parseTerminalPluginSettings(null).renderer).toBe(DEFAULT_TERMINAL_RENDERER);
-    expect(parseTerminalPluginSettings({}).renderer).toBe("ghostty");
-    expect(parseTerminalPluginSettings({ renderer: "unknown" }).renderer).toBe(
-      "ghostty",
-    );
+describe("terminal settings", () => {
+  it("defaults optional shell and cwd to empty values", () => {
+    expect(parseTerminalPluginSettings(null)).toEqual({ shell: "", cwd: "" });
+    expect(parseTerminalPluginSettings({})).toEqual({ shell: "", cwd: "" });
   });
 
-  it("accepts an explicit xterm value", () => {
-    expect(parseTerminalPluginSettings({ renderer: "xterm" }).renderer).toBe("xterm");
-    expect(
-      parseTerminalPluginSettings({ [TERMINAL_RENDERER_SETTING_ID]: "xterm" }).renderer,
-    ).toBe("xterm");
+  it("ignores legacy renderer values while retaining shell and cwd", () => {
+    expect(parseTerminalPluginSettings({
+      renderer: "xterm",
+      "terminal.renderer": "xterm",
+      shell: " /bin/zsh ",
+      cwd: " notes ",
+    })).toEqual({ shell: "/bin/zsh", cwd: "notes" });
   });
 
-  it("notifies subscribers so live panels can remount", () => {
-    const store = createTerminalRendererStore();
-    const generations: number[] = [];
-    const detach = store.subscribe(() => {
-      generations.push(store.generation);
-    });
-    expect(store.replace({ renderer: "ghostty" })).toBe(false);
-    expect(store.generation).toBe(0);
-    expect(store.replace({ renderer: "xterm" })).toBe(true);
-    expect(store.settings.renderer).toBe("xterm");
-    expect(store.generation).toBe(1);
-    expect(generations).toEqual([1]);
-    detach();
+  it("replaces the settings used by new sessions", () => {
+    const store = createTerminalSettingsStore();
+    store.replace({ shell: "/bin/bash", cwd: "vault" });
+    expect(store.settings).toEqual({ shell: "/bin/bash", cwd: "vault" });
   });
 });

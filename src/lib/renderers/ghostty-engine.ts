@@ -1,6 +1,6 @@
 import { resolveTerminalHostTheme } from "./host-theme";
 import type { TerminalRenderer } from "./terminal-renderer";
-import { wrapXtermLikeRenderer, type XtermLikeTerminal } from "./wrap-xterm-like";
+import { wrapGhosttyRenderer, type GhosttyTerminal } from "./wrap-ghostty";
 
 export const GHOSTTY_VT_WASM_URL = new URL("../ghostty-vt.wasm", import.meta.url);
 
@@ -19,9 +19,5 @@ export async function createGhosttyRenderer(): Promise<TerminalRenderer> {
       typeof document !== "undefined" ? document.documentElement : null,
     ),
   });
-  return wrapXtermLikeRenderer(
-    "ghostty",
-    terminal as unknown as XtermLikeTerminal,
-    new FitAddon(),
-  );
+  return wrapGhosttyRenderer(terminal as unknown as GhosttyTerminal, new FitAddon());
 }

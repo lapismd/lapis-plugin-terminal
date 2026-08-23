@@ -2,6 +2,7 @@ import {
   getNativeDesktopBridge,
   hasNativeDesktopCapability,
 } from "@lapis-notes/api";
+import { decodeTerminalOutput } from "./terminal-bytes";
 import type { TerminalSessionClient, TerminalSessionSummary } from "./terminal-session-fake";
 
 export type { TerminalSessionClient, TerminalSessionSummary };
@@ -48,7 +49,7 @@ export function createHostTerminalSessionClient(): TerminalSessionClient {
     },
     onOutput(listener) {
       return subscribeTerminalEvent("onTerminalOutput", (event) => {
-        listener(event.sessionId, base64ToText(event.data));
+        listener(event.sessionId, decodeTerminalOutput(event.data));
       });
     },
     onExit(listener) {
@@ -97,12 +98,4 @@ function resolveRequiredBridge() {
 
 function bytesToBase64(text: string): string {
   return btoa(unescape(encodeURIComponent(text)));
-}
-
-function base64ToText(value: string): string {
-  try {
-    return decodeURIComponent(escape(atob(value)));
-  } catch {
-    return value;
-  }
 }

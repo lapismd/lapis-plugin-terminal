@@ -9,9 +9,9 @@
 | LPT-005 | Implemented | application-ownership test and package.json peers |
 | LPT-006 | Implemented | unavailable empty state in TerminalPanel |
 | LPT-007 | Planned | Package Storybook placements |
-| LPT-008 | Implemented | renderer contract and package.json omit terminal-host |
-| LPT-009 | Implemented | settings persist terminal.renderer and default to ghostty |
-| LPT-010 | Implemented | select-renderer tests fall back to xterm when Ghostty fails |
+| LPT-008 | Implemented | Ghostty-only renderer contract, raw-byte session client tests, and dependency audit |
+| LPT-009 | Implemented | settings tests ignore legacy renderer values and retain shell plus cwd |
+| LPT-010 | Implemented | TerminalPanel routes Ghostty construction failures to terminal-error without fallback imports |
 | LPT-011 | Implemented | live session client and refreshHostSessions remount tests |
 | LPT-012 | Implemented | TerminalPanel Empty composition and contract test |
 | LPT-013 | Implemented | panel attaches listeners before create |
@@ -19,7 +19,7 @@
 | LPT-017 | Implemented | panel createSession runs when persisted resize/attach throws |
 | LPT-015 | Implemented | settings persist shell and cwd; panel create sends them; live panel uses workspace content padding; empty states stay flush; square-terminal icon |
 | LPT-016 | Implemented | TerminalView detaches its leaf and requestSaveLayout on bound session exit or a later unavailable write/resize |
-| LPT-018 | Implemented | wrap debounce fit and chunked write; panel uses fitted size and skips unchanged host resize |
+| LPT-018 | Implemented | Ghostty adapter debounce and chunked write; panel uses fitted size and skips unchanged host resize |
 | LPT-SPEC-001 | Implemented | spec/book.toml |
 | LPT-SPEC-002 | Implemented | spec-validator mapped spec-first rules |
 | LPT-SPEC-003 | Implemented | one verification row per ID |

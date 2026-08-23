@@ -1,11 +1,7 @@
 import { resolveTerminalHostTheme, type TerminalHostTheme } from "./host-theme";
-import type {
-  TerminalRenderer,
-  TerminalRendererKind,
-  TerminalRendererSize,
-} from "./terminal-renderer";
+import type { TerminalRenderer, TerminalRendererSize } from "./terminal-renderer";
 
-export type XtermLikeTerminal = {
+export type GhosttyTerminal = {
   open(parent: HTMLElement): void;
   write(data: string | Uint8Array, callback?: () => void): void;
   resize(cols: number, rows: number): void;
@@ -14,13 +10,11 @@ export type XtermLikeTerminal = {
   onData: (listener: (data: string) => void) => EventSubscription;
   onResize: (listener: (size: TerminalRendererSize) => void) => EventSubscription;
   focus?: () => void;
-  cols?: number;
-  rows?: number;
   options?: { theme?: Partial<TerminalHostTheme> };
   renderer?: { setTheme?(theme: TerminalHostTheme): void };
 };
 
-export type FitLikeAddon = {
+export type GhosttyFitAddon = {
   fit(): void;
   observeResize?: () => void;
   dispose(): void;
@@ -31,10 +25,9 @@ const GHOSTTY_WRITE_CHUNK = 4096;
 
 type EventSubscription = { dispose(): void } | (() => void) | void;
 
-export function wrapXtermLikeRenderer(
-  kind: Exclude<TerminalRendererKind, "plain">,
-  terminal: XtermLikeTerminal,
-  fit: FitLikeAddon,
+export function wrapGhosttyRenderer(
+  terminal: GhosttyTerminal,
+  fit: GhosttyFitAddon,
 ): TerminalRenderer {
   const dataListeners = new Set<(data: string) => void>();
   const resizeListeners = new Set<(size: TerminalRendererSize) => void>();
@@ -44,16 +37,14 @@ export function wrapXtermLikeRenderer(
   const subscriptions: Array<() => void> = [];
 
   return {
-    kind,
+    kind: "ghostty",
     mount(element) {
-      if (disposed) {
-        throw new Error(`${kind} renderer is disposed`);
-      }
-      applyHostTheme(kind, element, terminal, false);
+      if (disposed) throw new Error("ghostty renderer is disposed");
+      applyHostTheme(element, terminal, false);
       terminal.loadAddon(fit as never);
       terminal.open(element);
       opened = true;
-      applyHostTheme(kind, element, terminal, true);
+      applyHostTheme(element, terminal, true);
       subscriptions.push(
         subscribe(terminal.onData, (data) => {
           for (const listener of dataListeners) listener(data);
@@ -65,7 +56,7 @@ export function wrapXtermLikeRenderer(
         observeHostResize(element, () => {
           if (!disposed) fit.fit();
         }),
-        observeHostTheme(kind, element, terminal),
+        observeHostTheme(element, terminal),
       );
       fit.fit();
       terminal.focus?.();
@@ -91,16 +82,12 @@ export function wrapXtermLikeRenderer(
     },
     onData(listener) {
       dataListeners.add(listener);
-      return () => {
-        dataListeners.delete(listener);
-      };
+      return () => dataListeners.delete(listener);
     },
     onResize(listener) {
       resizeListeners.add(listener);
       if (lastSize) listener(lastSize);
-      return () => {
-        resizeListeners.delete(listener);
-      };
+      return () => resizeListeners.delete(listener);
     },
   };
 }
@@ -115,26 +102,13 @@ function subscribe<T>(
   return () => {};
 }
 
-function writeChunked(
-  terminal: XtermLikeTerminal,
-  bytes: string | Uint8Array,
-): void {
-  if (typeof bytes === "string") {
-    if (bytes.length <= GHOSTTY_WRITE_CHUNK) {
-      terminal.write(bytes);
-      return;
-    }
-    for (let index = 0; index < bytes.length; index += GHOSTTY_WRITE_CHUNK) {
-      terminal.write(bytes.slice(index, index + GHOSTTY_WRITE_CHUNK));
-    }
-    return;
-  }
-  if (bytes.byteLength <= GHOSTTY_WRITE_CHUNK) {
+function writeChunked(terminal: GhosttyTerminal, bytes: string | Uint8Array): void {
+  if (bytes.length <= GHOSTTY_WRITE_CHUNK) {
     terminal.write(bytes);
     return;
   }
-  for (let index = 0; index < bytes.byteLength; index += GHOSTTY_WRITE_CHUNK) {
-    terminal.write(bytes.subarray(index, index + GHOSTTY_WRITE_CHUNK));
+  for (let index = 0; index < bytes.length; index += GHOSTTY_WRITE_CHUNK) {
+    terminal.write(bytes.slice(index, index + GHOSTTY_WRITE_CHUNK));
   }
 }
 
@@ -144,9 +118,7 @@ function isRangeError(error: unknown): boolean {
 }
 
 function observeHostResize(element: HTMLElement, onResize: () => void): () => void {
-  if (typeof ResizeObserver === "undefined") {
-    return () => {};
-  }
+  if (typeof ResizeObserver === "undefined") return () => {};
   let timer: ReturnType<typeof setTimeout> | undefined;
   const observer = new ResizeObserver(() => {
     if (timer) clearTimeout(timer);
@@ -160,19 +132,16 @@ function observeHostResize(element: HTMLElement, onResize: () => void): () => vo
 }
 
 function observeHostTheme(
-  kind: Exclude<TerminalRendererKind, "plain">,
   element: HTMLElement,
-  terminal: XtermLikeTerminal,
+  terminal: GhosttyTerminal,
 ): () => void {
-  if (typeof MutationObserver === "undefined" || !element.ownerDocument) {
-    return () => {};
-  }
+  if (typeof MutationObserver === "undefined" || !element.ownerDocument) return () => {};
   let lastKey = themeKey(resolveTerminalHostTheme(element));
   const apply = () => {
     const next = themeKey(resolveTerminalHostTheme(element));
     if (next === lastKey) return;
     lastKey = next;
-    applyHostTheme(kind, element, terminal, true);
+    applyHostTheme(element, terminal, true);
   };
   const observer = new MutationObserver(apply);
   observer.observe(element.ownerDocument.documentElement, {
@@ -183,20 +152,17 @@ function observeHostTheme(
 }
 
 function applyHostTheme(
-  kind: Exclude<TerminalRendererKind, "plain">,
   element: HTMLElement,
-  terminal: XtermLikeTerminal,
+  terminal: GhosttyTerminal,
   opened: boolean,
 ): void {
   const theme = resolveTerminalHostTheme(element);
-  if (!opened || kind !== "ghostty") {
+  if (!opened) {
     terminal.options ??= {};
-    terminal.options.theme = {
-      ...terminal.options.theme,
-      ...theme,
-    };
+    terminal.options.theme = { ...terminal.options.theme, ...theme };
+    return;
   }
-  if (opened) terminal.renderer?.setTheme?.(theme);
+  terminal.renderer?.setTheme?.(theme);
 }
 
 function themeKey(theme: TerminalHostTheme): string {

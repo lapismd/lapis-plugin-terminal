@@ -14,14 +14,14 @@ workspace bottom panel.
 | LPT-005 | Production source MUST receive `App` explicitly or from API context and MUST NOT read `globalThis.app`. The plugin MUST NOT depend on `@lapismd/terminal-host` at runtime. |
 | LPT-006 | When `terminal-runtime` is unavailable the panel MUST stay usable and explain that the user should start `lapis-terminal-host` and set URL plus token. |
 | LPT-007 | Package Storybook MUST cover `Plugins/Terminal/*` placements. Changed visual stories MUST remain `visual-pending`. |
-| LPT-008 | The plugin MUST own Ghostty WASM and xterm.js renderers. It MUST NOT import `@lapismd/terminal-host`. Both renderers MUST share the session client and host byte stream. |
-| LPT-009 | The plugin MUST persist `terminal.renderer` as `ghostty` or `xterm`. The default MUST be `ghostty`. A change MUST remount live panels. |
-| LPT-010 | When Ghostty WASM fails to load or construct, the panel MUST fall back to xterm for that session and show a non-fatal status. Plugin load MUST NOT fail. |
+| LPT-008 | The plugin MUST own one VT renderer: packaged Ghostty WASM through `ghostty-web`. It MUST NOT ship or load xterm.js, and MUST NOT import `@lapismd/terminal-host`. Host output MUST remain raw `Uint8Array` bytes until Ghostty receives it. |
+| LPT-009 | The plugin MUST NOT register or persist a renderer setting. Legacy `renderer` and `terminal.renderer` values MUST be ignored while shell and cwd settings remain readable. |
+| LPT-010 | When Ghostty WASM fails to load or construct, the panel MUST show its existing terminal error empty state. Plugin load MUST NOT fail and MUST NOT load a fallback VT renderer. |
 | LPT-011 | The session client MUST read the current `terminal-runtime` capability on each use. When that capability becomes available, live panels MUST remount. |
 | LPT-012 | Unavailable and error Terminal panels MUST compose `@lapismd/design-core/shadcn/empty` with a title, description, and icon. They MUST keep the existing unavailable and error test ids. |
 | LPT-013 | The panel MUST subscribe to session output before create or reuse so restore and early echoes remain visible. |
-| LPT-014 | Ghostty MUST receive workspace view colors before `open()`. Theme writes after open MUST NOT assign Ghostty `options.theme`. Renderers MUST NOT keep a hardcoded dark canvas when the theme is light, and MUST hide helper and contenteditable carets. |
+| LPT-014 | Ghostty MUST receive workspace view colors before `open()`. Theme writes after open MUST NOT assign Ghostty `options.theme`. Ghostty MUST NOT keep a hardcoded dark canvas when the theme is light, and MUST hide helper and contenteditable carets. |
 | LPT-015 | The plugin MUST persist optional `terminal.shell` and `terminal.cwd`. Empty shell MUST use the host default. Empty cwd MUST use the desktop vault path when available, otherwise the host workspace. Live sessions MUST send those values on create. The live panel MUST inset the Ghostty surface with small workspace content padding. Empty states MUST remain flush. Plugin chrome MUST use the `square-terminal` icon. |
 | LPT-016 | When the bound host session exits, or a later write or resize reports that session unavailable, the owning `terminal` leaf MUST close and the workspace MUST commit that layout so the dock tab is removed. The panel MUST NOT keep an in-place process-exited banner. |
 | LPT-017 | When a persisted session cannot be resized or attached, the panel MUST create a replacement session instead of keeping a dead leaf. |
-| LPT-018 | The renderer wrap MUST debounce container fit, chunk Ghostty writes, and swallow a Ghostty write RangeError. Create and reuse MUST use the fitted size and MUST NOT send a host resize when cols and rows are unchanged. |
+| LPT-018 | The Ghostty adapter MUST debounce container fit, chunk writes, and swallow a Ghostty write RangeError. Create and reuse MUST use the fitted size and MUST NOT send a host resize when cols and rows are unchanged. |
