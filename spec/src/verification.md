@@ -21,6 +21,6 @@
 | LPT-016 | Implemented | TerminalView detaches its leaf and requestSaveLayout on bound session exit or a later unavailable write/resize |
 | LPT-018 | Implemented | Ghostty adapter debounce and chunked write; panel uses fitted size and skips unchanged host resize |
 | LPT-SPEC-001 | Implemented | spec/book.toml |
-| LPT-SPEC-002 | Implemented | spec-validator mapped spec-first rules |
+| LPT-SPEC-002 | Implemented | spec-validator mapped spec-first rules with the shared validator resolved from npm |
 | LPT-SPEC-003 | Implemented | one verification row per ID |
-| LPT-SPEC-004 | Implemented | portable peer and published dependency ranges |
+| LPT-SPEC-004 | Implemented | package manifest uses semver ranges and root validation tooling resolves `@lapismd/spec-validator` from npm |

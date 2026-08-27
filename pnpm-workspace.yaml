@@ -6,4 +6,3 @@ linkWorkspacePackages: true
 overrides:
   "@lapis-notes/api": "link:../lapis-notes/packages/api"
   "@lapismd/design-core": "link:../design-core"
-  "@lapismd/spec-validator": "link:../spec-validator"
