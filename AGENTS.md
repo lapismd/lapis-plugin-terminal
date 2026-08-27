@@ -26,7 +26,9 @@ This repository owns the first-party external Lapis plugin whose runtime ID is
 - Canonical requirements live in `spec/src`.
 - Run `pnpm spec:check`, `pnpm check`, `pnpm test`, `pnpm build`, and `pnpm
   publint` for relevant changes.
-- Consume colocated siblings through `link:` overrides.
+- Consume published LapisMD dependencies through normal npm semver ranges.
+  Unpublished first-party Lapis host packages remain development-only until
+  their own publication plan is complete.
 
 ## Version control
 
