@@ -44,3 +44,6 @@ A layout-ready seed belongs to one plugin activation; disable fences old callbac
 
 View unload retires its PTY unless a same-plugin replacement on the same leaf
 claims ownership. Renderer-only remounts continue to reuse that PTY.
+
+Package source and issues are hosted at `lapismd/lapis-plugin-terminal`.
+Repository creation and source merging do not publish the npm package.

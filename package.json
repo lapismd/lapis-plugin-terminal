@@ -63,5 +63,13 @@
   },
   "dependencies": {
     "ghostty-web": "^0.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lapismd/lapis-plugin-terminal.git"
+  },
+  "homepage": "https://github.com/lapismd/lapis-plugin-terminal#readme",
+  "bugs": {
+    "url": "https://github.com/lapismd/lapis-plugin-terminal/issues"
   }
 }
