@@ -16,7 +16,9 @@ Lapis or Design Core dependencies.
 
 Validation uses the Deno-free spec-validator 0.2.0 release from npm. The
 qualified hosted UI uses released API/Design Core peers, never local source
-aliases in the publishable manifest.
+aliases in the publishable manifest, workspace configuration or lockfile.
+The committed lockfile resolves API 0.2.4 from npm; clean registry installation
+passes all 27 tests plus check, build, specification and package validation.
 
 The canonical GitHub repository is `lapismd/lapis-plugin-terminal`. Pull requests
 and main pushes run the source, test, build, specification and package checks
