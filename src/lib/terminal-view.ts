@@ -10,18 +10,25 @@ import { TERMINAL_VIEW_TYPE } from "./terminal-view-type";
 
 export class TerminalView extends View {
   private component: Record<string, unknown> | null = null;
-  #sessionId: string | null = null;
   readonly #sessionOwner: TerminalSessionOwner;
+  #transferred = false;
   #stopExit: (() => void) | null = null;
 
   constructor(
     leaf: WorkspaceLeaf,
     private readonly plugin: TerminalPlugin,
   ) {
+    const previous =
+      leaf.view instanceof TerminalView &&
+      leaf.view.plugin === plugin &&
+      !leaf.view.#sessionOwner.closed
+        ? leaf.view
+        : null;
     super(leaf);
-    this.#sessionOwner = new TerminalSessionOwner(plugin.sessions, (id) => {
-      this.#sessionId = id;
-    });
+    this.#sessionOwner = previous
+      ? previous.#sessionOwner
+      : new TerminalSessionOwner(plugin.sessions);
+    if (previous) previous.#transferred = true;
   }
 
   getViewType(): string {
@@ -37,15 +44,14 @@ export class TerminalView extends View {
   }
 
   getState(): Record<string, unknown> {
-    return { sessionId: this.#sessionId };
+    return { sessionId: this.#sessionOwner.sessionId };
   }
 
   async setState(
     state: Record<string, unknown>,
     result?: Parameters<View["setState"]>[1],
   ): Promise<void> {
-    if (!this.#sessionId && typeof state.sessionId === "string") {
-      this.#sessionId = state.sessionId;
+    if (typeof state.sessionId === "string") {
       this.#sessionOwner.restore(state.sessionId);
     }
     await super.setState(state, result);
@@ -56,13 +62,13 @@ export class TerminalView extends View {
   }
 
   protected onClose(): Promise<void> {
-    return this.#sessionOwner.close();
+    return this.#transferred ? Promise.resolve() : this.#sessionOwner.close();
   }
 
   onload(): void {
     if (this.component) return;
     this.#stopExit = this.plugin.sessions.onExit((sessionId) => {
-      if (sessionId === this.#sessionId) this.closeOwningLeaf();
+      if (sessionId === this.#sessionOwner.sessionId) this.closeOwningLeaf();
     });
     this.component = mount(TerminalPanel, {
       target: this.containerEl,
@@ -70,9 +76,10 @@ export class TerminalView extends View {
       props: {
         app: this.app,
         plugin: this.plugin,
-        sessionId: this.#sessionId,
+        sessionId: this.#sessionOwner.sessionId,
         onSessionId: (sessionId: string | null) => {
-          this.#sessionId = sessionId;
+          if (sessionId) this.#sessionOwner.restore(sessionId);
+          else this.#sessionOwner.forget(this.#sessionOwner.sessionId);
         },
         onSessionExit: () => {
           this.closeOwningLeaf();
@@ -104,7 +111,10 @@ export class TerminalView extends View {
     try {
       if (component) await unmount(component);
     } finally {
-      await this.#sessionOwner.close();
+      // WorkspaceLeaf replaces its View synchronously. Give the replacement
+      // constructor a turn to claim this owner before retiring its shell.
+      await Promise.resolve();
+      if (!this.#transferred) await this.#sessionOwner.close();
     }
   }
 }

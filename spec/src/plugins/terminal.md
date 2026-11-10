@@ -32,9 +32,9 @@ settings; authenticated transport, admitted cwd policy and PTY process lifetime
 remain host-owned. Peer ranges target the current published API 0.2.4 and
 Design Core 0.12.3 contracts.
 
-## View-owned creation
+## Leaf-owned creation
 
-A Terminal View retains one pending PTY creation across renderer remounts. Empty layout state does not replace an already owned session; closing the View retires a late creation. Panel mounting continues to fit the actual renderer size before attachment.
+A Terminal leaf retains one pending PTY creation across renderer remounts and same-plugin View replacements. A replacement claims the session before the previous View retires; empty layout state does not replace that owned session. Closing the leaf or replacing Terminal with another view retires a late creation. Panel mounting continues to fit the actual renderer size before attachment.
 
 The panel reports busy until a fitted session is bound, and retains bounded input typed during creation rather than silently dropping it.
 
@@ -42,5 +42,5 @@ Default seeding opens the bottom panel without activating its command host. A la
 
 A layout-ready seed belongs to one plugin activation; disable fences old callbacks and drains pending seed work before retry or host cleanup.
 
-View unload (including layout replacement) retires its owned PTY, not merely its
-renderer. Renderer-only remounts within a live View continue to reuse that PTY.
+View unload retires its PTY unless a same-plugin replacement on the same leaf
+claims ownership. Renderer-only remounts continue to reuse that PTY.

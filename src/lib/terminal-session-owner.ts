@@ -13,8 +13,14 @@ export class TerminalSessionOwner {
   #closed = false;
   constructor(
     private readonly sessions: TerminalSessionClient,
-    private readonly changed: (id: string | null) => void,
+    private readonly changed: (id: string | null) => void = () => {},
   ) {}
+  get sessionId(): string | null {
+    return this.#id;
+  }
+  get closed(): boolean {
+    return this.#closed;
+  }
   restore(id: string): void {
     if (!this.#id && !this.#pending) this.#id = id;
   }
