@@ -3,7 +3,8 @@
   import { useApplicationState } from "@lapis-notes/api";
   import * as Empty from "@lapismd/design-core/shadcn/empty";
   import { WorkspaceIcon } from "@lapismd/design-core/workspace/icon";
-  import { untrack } from "svelte";
+  import { getContext, untrack } from "svelte";
+  import { TERMINAL_SESSION_OWNER, type TerminalSessionOwner } from "./terminal-session-owner";
   import { createSubscriber } from "svelte/reactivity";
   import type { TerminalRenderer } from "./renderers/terminal-renderer";
   import type { TerminalPlugin } from "./terminal-plugin";
@@ -23,8 +24,10 @@
     onSessionExit?: () => void;
   } = $props();
 
+  const sessionOwner = getContext<TerminalSessionOwner | undefined>(TERMINAL_SESSION_OWNER);
   const application = useApplicationState(untrack(() => app));
   let error = $state<string | null>(null);
+  let ready = $state(false);
   let activeSessionId = $state<string | null>(untrack(() => sessionId));
   const subscribeHost = createSubscriber((update) => plugin.onHostChange(update));
   let hostAvailable = $derived.by(() => {
@@ -38,6 +41,7 @@
   });
 
   function attachRenderer(element: HTMLElement) {
+    ready = false;
     let cancelled = false;
     let renderer: TerminalRenderer | null = null;
     const detach: Array<() => void> = [];
@@ -54,6 +58,7 @@
         let boundSessionId = activeSessionId;
         let fitted = { cols: 80, rows: 24 };
         let lastSent = { cols: 0, rows: 0 };
+        let pendingInput = "";
         const pendingOutput: Array<{ id: string; bytes: Uint8Array }> = [];
         const closeBoundSession = (id?: string | null) => {
           if (cancelled || !boundSessionId) return;
@@ -81,6 +86,8 @@
         detach.push(
           renderer.onData((data) => {
             if (boundSessionId) keepAlive(plugin.sessions.write(boundSessionId, data));
+            else if (new TextEncoder().encode(pendingInput + data).byteLength <= 65536) pendingInput += data;
+            else error = "Terminal input buffer exceeds its limit";
           }),
           renderer.onResize(({ cols, rows }) => {
             fitted = { cols, rows };
@@ -92,18 +99,13 @@
           }),
         );
         const createSession = async () => {
-          const created = await plugin.sessions.create(
-            resolveTerminalCreateOptions(
-              plugin.getSettings(),
-              app ?? application,
-              fitted,
-            ),
-          );
+          const options = resolveTerminalCreateOptions(plugin.getSettings(), app ?? application, fitted);
+          const created = await (sessionOwner?.acquire(options) ?? plugin.sessions.create(options));
           if (cancelled) return;
           boundSessionId = created.sessionId;
           activeSessionId = created.sessionId;
-          lastSent = fitted;
           onSessionId(created.sessionId);
+          sendResize(fitted.cols, fitted.rows);
         };
         if (!boundSessionId) {
           await createSession();
@@ -112,11 +114,17 @@
             await plugin.sessions.resize(boundSessionId, fitted.cols, fitted.rows);
             lastSent = fitted;
           } catch {
+            sessionOwner?.forget(boundSessionId);
             if (!cancelled) await createSession();
           }
         }
         for (const chunk of pendingOutput) {
           if (chunk.id === boundSessionId) renderer.write(chunk.bytes);
+        }
+        if (!cancelled && boundSessionId) {
+          if (pendingInput) await plugin.sessions.write(boundSessionId, pendingInput);
+          pendingInput = "";
+          if (!cancelled) ready = true;
         }
       } catch (caught: unknown) {
         if (!cancelled) {
@@ -143,6 +151,7 @@
   data-ui-component="terminal-panel"
   data-testid="terminal-panel"
   data-owned-app={Boolean(application)}
+  aria-busy={hostAvailable && !error && !ready}
 >
   {#if !hostAvailable}
     {@render hostEmpty(

@@ -1,12 +1,16 @@
+import { TerminalActivation } from "./terminal-activation";
 import {
   Plugin,
   type App,
   type PluginManifest,
-  type WorkspaceLeaf,
+  WorkspaceLeaf,
 } from "@lapis-notes/api";
 import { registerTerminalSettings } from "./register-terminal-settings";
 import { createGhosttyRenderer } from "./renderers/ghostty-engine";
-import type { TerminalRenderer, TerminalRendererFactory } from "./renderers/terminal-renderer";
+import type {
+  TerminalRenderer,
+  TerminalRendererFactory,
+} from "./renderers/terminal-renderer";
 import {
   createFakeTerminalSessionClient,
   createHostTerminalSessionClient,
@@ -30,6 +34,7 @@ const MANIFEST: PluginManifest = {
 
 export class TerminalPlugin extends Plugin {
   #sessions: TerminalSessionClient;
+  readonly #activation = new TerminalActivation();
   #settingsStore = createTerminalSettingsStore();
   #rendererFactory: TerminalRendererFactory = createGhosttyRenderer;
   #hostListeners = new Set<() => void>();
@@ -111,9 +116,19 @@ export class TerminalPlugin extends Plugin {
     this.addRibbonIcon("square-terminal", "Open Terminal", () => {
       void this.openTerminal();
     });
-    this.app.workspace.onLayoutReady(() => {
-      void this.seedDefaultTerminal();
-    });
+    const seed = this.#activation.begin(
+      (current) => this.seedDefaultTerminal(current),
+      (error) => {
+        this.app.notifications.notify({
+          title: "Terminal",
+          message: error instanceof Error ? error.message : String(error),
+          severity: "error",
+          source: "terminal",
+        });
+      },
+    );
+    this.register(() => this.#activation.fence());
+    this.app.workspace.onLayoutReady(seed);
   }
 
   async openTerminal(): Promise<WorkspaceLeaf> {
@@ -126,18 +141,38 @@ export class TerminalPlugin extends Plugin {
     return this.createTerminal();
   }
 
-  async createTerminal(): Promise<WorkspaceLeaf> {
-    const leaf = this.app.workspace.getBottomLeaf();
+  private async newTerminalLeaf(activate = true): Promise<WorkspaceLeaf> {
+    const workspace = this.app.workspace;
+    const leaf = activate ? workspace.getBottomLeaf() : new WorkspaceLeaf();
+    if (!activate) {
+      workspace.bottomPanel.addChild(leaf);
+      workspace.bottomPanel.selected = leaf;
+    }
     await leaf.setViewState({ type: TERMINAL_VIEW_TYPE, state: {} });
+    return leaf;
+  }
+
+  async createTerminal(): Promise<WorkspaceLeaf> {
+    const leaf = await this.newTerminalLeaf();
     await this.app.workspace.revealLeaf(leaf);
     return leaf;
   }
 
-  private async seedDefaultTerminal(): Promise<void> {
+  async onunload(): Promise<void> {
+    await this.#activation.drain();
+  }
+
+  private async seedDefaultTerminal(current: () => boolean): Promise<void> {
     if (this.app.workspace.getLeavesOfType(TERMINAL_VIEW_TYPE).length > 0) {
       return;
     }
-    await this.createTerminal();
+    if (!current()) return;
+    const leaf = await this.newTerminalLeaf(false);
+    if (!current()) {
+      if (leaf.parent) leaf.detach();
+      return;
+    }
+    this.app.workspace.setBottomPanelOpen(true);
   }
 }
 

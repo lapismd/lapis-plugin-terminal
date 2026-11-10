@@ -1,5 +1,8 @@
 import { resolveTerminalHostTheme, type TerminalHostTheme } from "./host-theme";
-import type { TerminalRenderer, TerminalRendererSize } from "./terminal-renderer";
+import type {
+  TerminalRenderer,
+  TerminalRendererSize,
+} from "./terminal-renderer";
 
 export type GhosttyTerminal = {
   open(parent: HTMLElement): void;
@@ -8,7 +11,9 @@ export type GhosttyTerminal = {
   dispose(): void;
   loadAddon(addon: { activate(terminal: never): void; dispose(): void }): void;
   onData: (listener: (data: string) => void) => EventSubscription;
-  onResize: (listener: (size: TerminalRendererSize) => void) => EventSubscription;
+  onResize: (
+    listener: (size: TerminalRendererSize) => void,
+  ) => EventSubscription;
   focus?: () => void;
   options?: { theme?: Partial<TerminalHostTheme> };
   renderer?: { setTheme?(theme: TerminalHostTheme): void };
@@ -59,7 +64,15 @@ export function wrapGhosttyRenderer(
         observeHostTheme(element, terminal),
       );
       fit.fit();
-      terminal.focus?.();
+      const active = element.ownerDocument?.activeElement;
+      if (
+        !active ||
+        active === element.ownerDocument?.body ||
+        element.contains(active) ||
+        active.contains(element)
+      ) {
+        terminal.focus?.();
+      }
     },
     dispose() {
       disposed = true;
@@ -102,7 +115,10 @@ function subscribe<T>(
   return () => {};
 }
 
-function writeChunked(terminal: GhosttyTerminal, bytes: string | Uint8Array): void {
+function writeChunked(
+  terminal: GhosttyTerminal,
+  bytes: string | Uint8Array,
+): void {
   if (bytes.length <= GHOSTTY_WRITE_CHUNK) {
     terminal.write(bytes);
     return;
@@ -113,11 +129,16 @@ function writeChunked(terminal: GhosttyTerminal, bytes: string | Uint8Array): vo
 }
 
 function isRangeError(error: unknown): boolean {
-  return error instanceof RangeError ||
-    (error instanceof Error && /offset is out of bounds/i.test(error.message));
+  return (
+    error instanceof RangeError ||
+    (error instanceof Error && /offset is out of bounds/i.test(error.message))
+  );
 }
 
-function observeHostResize(element: HTMLElement, onResize: () => void): () => void {
+function observeHostResize(
+  element: HTMLElement,
+  onResize: () => void,
+): () => void {
   if (typeof ResizeObserver === "undefined") return () => {};
   let timer: ReturnType<typeof setTimeout> | undefined;
   const observer = new ResizeObserver(() => {
@@ -135,7 +156,8 @@ function observeHostTheme(
   element: HTMLElement,
   terminal: GhosttyTerminal,
 ): () => void {
-  if (typeof MutationObserver === "undefined" || !element.ownerDocument) return () => {};
+  if (typeof MutationObserver === "undefined" || !element.ownerDocument)
+    return () => {};
   let lastKey = themeKey(resolveTerminalHostTheme(element));
   const apply = () => {
     const next = themeKey(resolveTerminalHostTheme(element));

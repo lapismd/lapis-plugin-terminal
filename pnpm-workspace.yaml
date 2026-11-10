@@ -1,7 +1,4 @@
 packages:
   - "."
 
-linkWorkspacePackages: true
-
-overrides:
-  "@lapis-notes/api": "link:../lapis-notes/packages/api"
+linkWorkspacePackages: false
