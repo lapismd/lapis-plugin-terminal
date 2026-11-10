@@ -96,10 +96,15 @@ export class TerminalView extends View {
     });
   }
 
-  onunload(): void {
+  async onunload(): Promise<void> {
     this.#stopExit?.();
     this.#stopExit = null;
-    if (this.component) void unmount(this.component);
+    const component = this.component;
     this.component = null;
+    try {
+      if (component) await unmount(component);
+    } finally {
+      await this.#sessionOwner.close();
+    }
   }
 }
