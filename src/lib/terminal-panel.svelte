@@ -27,6 +27,7 @@
   const sessionOwner = getContext<TerminalSessionOwner | undefined>(TERMINAL_SESSION_OWNER);
   const application = useApplicationState(untrack(() => app));
   let error = $state<string | null>(null);
+  let ready = $state(false);
   let activeSessionId = $state<string | null>(untrack(() => sessionId));
   const subscribeHost = createSubscriber((update) => plugin.onHostChange(update));
   let hostAvailable = $derived.by(() => {
@@ -40,6 +41,7 @@
   });
 
   function attachRenderer(element: HTMLElement) {
+    ready = false;
     let cancelled = false;
     let renderer: TerminalRenderer | null = null;
     const detach: Array<() => void> = [];
@@ -56,6 +58,7 @@
         let boundSessionId = activeSessionId;
         let fitted = { cols: 80, rows: 24 };
         let lastSent = { cols: 0, rows: 0 };
+        let pendingInput = "";
         const pendingOutput: Array<{ id: string; bytes: Uint8Array }> = [];
         const closeBoundSession = (id?: string | null) => {
           if (cancelled || !boundSessionId) return;
@@ -83,6 +86,8 @@
         detach.push(
           renderer.onData((data) => {
             if (boundSessionId) keepAlive(plugin.sessions.write(boundSessionId, data));
+            else if (new TextEncoder().encode(pendingInput + data).byteLength <= 65536) pendingInput += data;
+            else error = "Terminal input buffer exceeds its limit";
           }),
           renderer.onResize(({ cols, rows }) => {
             fitted = { cols, rows };
@@ -116,6 +121,11 @@
         for (const chunk of pendingOutput) {
           if (chunk.id === boundSessionId) renderer.write(chunk.bytes);
         }
+        if (!cancelled && boundSessionId) {
+          if (pendingInput) await plugin.sessions.write(boundSessionId, pendingInput);
+          pendingInput = "";
+          if (!cancelled) ready = true;
+        }
       } catch (caught: unknown) {
         if (!cancelled) {
           error =
@@ -141,6 +151,7 @@
   data-ui-component="terminal-panel"
   data-testid="terminal-panel"
   data-owned-app={Boolean(application)}
+  aria-busy={hostAvailable && !error && !ready}
 >
   {#if !hostAvailable}
     {@render hostEmpty(

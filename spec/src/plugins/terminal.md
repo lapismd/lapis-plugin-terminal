@@ -35,3 +35,5 @@ Design Core 0.12.3 contracts.
 ## View-owned creation
 
 A Terminal View retains one pending PTY creation across renderer remounts. Empty layout state does not replace an already owned session; closing the View retires a late creation. Panel mounting continues to fit the actual renderer size before attachment.
+
+The panel reports busy until a fitted session is bound, and retains bounded input typed during creation rather than silently dropping it.
