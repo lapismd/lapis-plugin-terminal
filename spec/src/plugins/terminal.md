@@ -31,3 +31,7 @@ existing `TerminalPlugin` constructor. The plugin keeps Ghostty, views and
 settings; authenticated transport, admitted cwd policy and PTY process lifetime
 remain host-owned. Peer ranges target the current published API 0.2.4 and
 Design Core 0.12.3 contracts.
+
+## View-owned creation
+
+A Terminal View retains one pending PTY creation across renderer remounts. Empty layout state does not replace an already owned session; closing the View retires a late creation. Panel mounting continues to fit the actual renderer size before attachment.

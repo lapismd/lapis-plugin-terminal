@@ -1,3 +1,7 @@
+import {
+  TERMINAL_SESSION_OWNER,
+  TerminalSessionOwner,
+} from "./terminal-session-owner";
 import { View, type WorkspaceLeaf } from "@lapis-notes/api";
 import { mount, unmount } from "svelte";
 import type { TerminalPlugin } from "./terminal-plugin";
@@ -7,6 +11,7 @@ import { TERMINAL_VIEW_TYPE } from "./terminal-view-type";
 export class TerminalView extends View {
   private component: Record<string, unknown> | null = null;
   #sessionId: string | null = null;
+  readonly #sessionOwner: TerminalSessionOwner;
   #stopExit: (() => void) | null = null;
 
   constructor(
@@ -14,6 +19,9 @@ export class TerminalView extends View {
     private readonly plugin: TerminalPlugin,
   ) {
     super(leaf);
+    this.#sessionOwner = new TerminalSessionOwner(plugin.sessions, (id) => {
+      this.#sessionId = id;
+    });
   }
 
   getViewType(): string {
@@ -36,7 +44,10 @@ export class TerminalView extends View {
     state: Record<string, unknown>,
     result?: Parameters<View["setState"]>[1],
   ): Promise<void> {
-    this.#sessionId = typeof state.sessionId === "string" ? state.sessionId : null;
+    if (!this.#sessionId && typeof state.sessionId === "string") {
+      this.#sessionId = state.sessionId;
+      this.#sessionOwner.restore(state.sessionId);
+    }
     await super.setState(state, result);
   }
 
@@ -45,15 +56,17 @@ export class TerminalView extends View {
   }
 
   protected onClose(): Promise<void> {
-    return Promise.resolve();
+    return this.#sessionOwner.close();
   }
 
   onload(): void {
+    if (this.component) return;
     this.#stopExit = this.plugin.sessions.onExit((sessionId) => {
       if (sessionId === this.#sessionId) this.closeOwningLeaf();
     });
     this.component = mount(TerminalPanel, {
       target: this.containerEl,
+      context: new Map([[TERMINAL_SESSION_OWNER, this.#sessionOwner]]),
       props: {
         app: this.app,
         plugin: this.plugin,

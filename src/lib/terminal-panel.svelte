@@ -3,7 +3,8 @@
   import { useApplicationState } from "@lapis-notes/api";
   import * as Empty from "@lapismd/design-core/shadcn/empty";
   import { WorkspaceIcon } from "@lapismd/design-core/workspace/icon";
-  import { untrack } from "svelte";
+  import { getContext, untrack } from "svelte";
+  import { TERMINAL_SESSION_OWNER, type TerminalSessionOwner } from "./terminal-session-owner";
   import { createSubscriber } from "svelte/reactivity";
   import type { TerminalRenderer } from "./renderers/terminal-renderer";
   import type { TerminalPlugin } from "./terminal-plugin";
@@ -23,6 +24,7 @@
     onSessionExit?: () => void;
   } = $props();
 
+  const sessionOwner = getContext<TerminalSessionOwner | undefined>(TERMINAL_SESSION_OWNER);
   const application = useApplicationState(untrack(() => app));
   let error = $state<string | null>(null);
   let activeSessionId = $state<string | null>(untrack(() => sessionId));
@@ -92,18 +94,13 @@
           }),
         );
         const createSession = async () => {
-          const created = await plugin.sessions.create(
-            resolveTerminalCreateOptions(
-              plugin.getSettings(),
-              app ?? application,
-              fitted,
-            ),
-          );
+          const options = resolveTerminalCreateOptions(plugin.getSettings(), app ?? application, fitted);
+          const created = await (sessionOwner?.acquire(options) ?? plugin.sessions.create(options));
           if (cancelled) return;
           boundSessionId = created.sessionId;
           activeSessionId = created.sessionId;
-          lastSent = fitted;
           onSessionId(created.sessionId);
+          sendResize(fitted.cols, fitted.rows);
         };
         if (!boundSessionId) {
           await createSession();
@@ -112,6 +109,7 @@
             await plugin.sessions.resize(boundSessionId, fitted.cols, fitted.rows);
             lastSent = fitted;
           } catch {
+            sessionOwner?.forget(boundSessionId);
             if (!cancelled) await createSession();
           }
         }
