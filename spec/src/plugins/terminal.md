@@ -29,8 +29,10 @@ workspace bottom panel.
 Native hosted consumers inject the public `TerminalSessionClient` through the
 existing `TerminalPlugin` constructor. The plugin keeps Ghostty, views and
 settings; authenticated transport, admitted cwd policy and PTY process lifetime
-remain host-owned. Peer ranges target the current published API 0.2.4 and
-Design Core 0.12.3 contracts.
+remain host-owned. Peer ranges retain the qualified API 0.2 and Design Core
+0.12 contracts while admitting the published API 0.4/0.6 and Design Core 0.13
+host cohorts. Release validation builds against API 0.6.5 and Design Core
+0.13.4 before the exact tagged package is published to npm with provenance.
 
 ## Leaf-owned creation
 

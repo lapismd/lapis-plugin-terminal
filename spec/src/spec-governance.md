@@ -14,13 +14,18 @@ not a runtime package. It MUST resolve from npm through the root development
 dependency. This exception does not weaken source-first validation for runtime
 Lapis or Design Core dependencies.
 
-Validation uses the Deno-free spec-validator 0.2.0 release from npm. The
+Validation uses the Deno-free spec-validator 0.2.1 release from npm. The
 qualified hosted UI uses released API/Design Core peers, never local source
 aliases in the publishable manifest, workspace configuration or lockfile.
-The committed lockfile resolves API 0.2.4 from npm; clean registry installation
-passes all 27 tests plus check, build, specification and package validation.
+The committed lockfile resolves API 0.6.5, UI 0.2.5 and Design Core 0.13.4 from
+npm; clean registry installation passes all 27 tests plus check, build,
+specification and package validation.
 
 The canonical GitHub repository is `lapismd/lapis-plugin-terminal`. Pull requests
 and main pushes run the source, test, build, specification and package checks
-on Node 24 with locked registry dependencies. CI has read-only repository
-permissions and contains no package publication workflow.
+on Node 24 with locked registry dependencies. A source-matching `v*` tag runs
+the same locked qualification before immutable public npm publication, verifies
+the packaged Ghostty WASM and runtime manifest in a clean consumer, checks npm
+signatures and provenance, and only then creates the GitHub release. Initial
+publication may use the protected bootstrap token; later releases use the npm
+trusted publisher through GitHub OIDC.
