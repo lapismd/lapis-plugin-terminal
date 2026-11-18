@@ -1,0 +1,99 @@
+name: Publish npm package
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: terminal-ui-npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'lapismd/lapis-plugin-terminal'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: npm-production
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - name: Install the exact release dependencies
+        run: pnpm install --frozen-lockfile --ignore-pnpmfile
+      - name: Verify the tag and public package identity
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync } from "node:fs";
+          const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+          const manifest = JSON.parse(readFileSync("manifest.json", "utf8"));
+          if (pkg.name !== "@lapis-notes/lapis-plugin-terminal")
+            throw Error("Unexpected npm package identity");
+          if (pkg.private || pkg.publishConfig?.access !== "public")
+            throw Error("Terminal package is not configured for public publication");
+          if (manifest.id !== "terminal" || manifest.version !== pkg.version)
+            throw Error("Terminal runtime and npm package versions differ");
+          if (process.env.GITHUB_REF_NAME !== `v${pkg.version}`)
+            throw Error(`Tag ${process.env.GITHUB_REF_NAME} does not match ${pkg.version}`);
+          JS
+      - name: Qualify source and package
+        run: |
+          pnpm spec:check
+          pnpm check
+          pnpm test
+          pnpm build
+          pnpm publint
+          npm pack --dry-run --ignore-scripts --json > "$RUNNER_TEMP/terminal-pack.json"
+          jq -e '[.[0].files[].path] | index("dist/ghostty-vt.wasm") != null and index("manifest.json") != null' "$RUNNER_TEMP/terminal-pack.json"
+      - name: Install current npm for trusted publication
+        run: npm install --global npm@12.0.2
+      - name: Publish the immutable package with provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_BOOTSTRAP_TOKEN || secrets.NPM_TOKEN }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if npm view "@lapis-notes/lapis-plugin-terminal@$version" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "The exact immutable version is already published."
+            exit 0
+          fi
+          if [ -n "$NODE_AUTH_TOKEN" ]; then
+            npm whoami --registry=https://registry.npmjs.org
+          else
+            echo "No bootstrap token is present; npm will use the registered trusted publisher."
+          fi
+          npm publish --access public --provenance --registry=https://registry.npmjs.org
+      - name: Verify registry installation and provenance
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          for attempt in $(seq 1 12); do
+            published="$(npm view "@lapis-notes/lapis-plugin-terminal@$version" version --registry=https://registry.npmjs.org 2>/dev/null || true)"
+            if [ "$published" = "$version" ]; then
+              break
+            fi
+            if [ "$attempt" = 12 ]; then
+              echo "Terminal $version did not become visible on npm" >&2
+              exit 1
+            fi
+            sleep 10
+          done
+          verify_dir="$RUNNER_TEMP/terminal-consumer"
+          mkdir -p "$verify_dir"
+          cd "$verify_dir"
+          npm init --yes
+          npm install --ignore-scripts --package-lock=true "@lapis-notes/lapis-plugin-terminal@$version"
+          test -f node_modules/@lapis-notes/lapis-plugin-terminal/dist/ghostty-vt.wasm
+          npm audit signatures --include-attestations
+      - name: Create the source-bound GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
