@@ -1,4 +1,5 @@
 export { TerminalPlugin, default } from "./terminal-plugin";
+export type { TerminalAppearanceOptions } from "./renderers/ghostty-engine";
 export { TerminalView } from "./terminal-view";
 export { TERMINAL_PLUGIN_ID, TERMINAL_VIEW_TYPE } from "./terminal-view-type";
 export { createHostTerminalSessionClient } from "./terminal-session-client";
@@ -14,7 +15,5 @@ export type {
   TerminalRendererFactory,
   TerminalRendererKind,
 } from "./renderers/terminal-renderer";
-export {
-  parseTerminalPluginSettings,
-} from "./terminal-settings";
+export { parseTerminalPluginSettings } from "./terminal-settings";
 export type { TerminalPluginSettings } from "./terminal-settings";

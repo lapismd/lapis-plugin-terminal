@@ -36,7 +36,7 @@ export class TerminalView extends View {
   }
 
   getDisplayText(): string {
-    return "Terminal";
+    return `Terminal ${this.state.terminalNumber ?? 1}`;
   }
 
   getIcon(): string {
@@ -44,7 +44,11 @@ export class TerminalView extends View {
   }
 
   getState(): Record<string, unknown> {
-    return { sessionId: this.#sessionOwner.sessionId };
+    const state = { ...super.getState() };
+    if (this.#sessionOwner.sessionId)
+      state.sessionId = this.#sessionOwner.sessionId;
+    else delete state.sessionId;
+    return state;
   }
 
   async setState(
@@ -54,7 +58,13 @@ export class TerminalView extends View {
     if (typeof state.sessionId === "string") {
       this.#sessionOwner.restore(state.sessionId);
     }
-    await super.setState(state, result);
+    await super.setState(
+      {
+        ...state,
+        terminalNumber: this.plugin.reserveTerminalNumber(state.terminalNumber),
+      },
+      result,
+    );
   }
 
   protected onOpen(): Promise<void> {

@@ -2,9 +2,13 @@
   import type { App } from "@lapis-notes/api";
   import { useApplicationState } from "@lapis-notes/api";
   import * as Empty from "@lapismd/design-core/shadcn/empty";
+  import { Button } from "@lapismd/design-core/shadcn/button";
   import { WorkspaceIcon } from "@lapismd/design-core/workspace/icon";
   import { getContext, untrack } from "svelte";
-  import { TERMINAL_SESSION_OWNER, type TerminalSessionOwner } from "./terminal-session-owner";
+  import {
+    TERMINAL_SESSION_OWNER,
+    type TerminalSessionOwner,
+  } from "./terminal-session-owner";
   import { createSubscriber } from "svelte/reactivity";
   import type { TerminalRenderer } from "./renderers/terminal-renderer";
   import type { TerminalPlugin } from "./terminal-plugin";
@@ -24,12 +28,16 @@
     onSessionExit?: () => void;
   } = $props();
 
-  const sessionOwner = getContext<TerminalSessionOwner | undefined>(TERMINAL_SESSION_OWNER);
+  const sessionOwner = getContext<TerminalSessionOwner | undefined>(
+    TERMINAL_SESSION_OWNER,
+  );
   const application = useApplicationState(untrack(() => app));
   let error = $state<string | null>(null);
   let ready = $state(false);
   let activeSessionId = $state<string | null>(untrack(() => sessionId));
-  const subscribeHost = createSubscriber((update) => plugin.onHostChange(update));
+  const subscribeHost = createSubscriber((update) =>
+    plugin.onHostChange(update),
+  );
   let hostAvailable = $derived.by(() => {
     subscribeHost();
     return plugin.sessions.available;
@@ -85,8 +93,12 @@
         };
         detach.push(
           renderer.onData((data) => {
-            if (boundSessionId) keepAlive(plugin.sessions.write(boundSessionId, data));
-            else if (new TextEncoder().encode(pendingInput + data).byteLength <= 65536) pendingInput += data;
+            if (boundSessionId)
+              keepAlive(plugin.sessions.write(boundSessionId, data));
+            else if (
+              new TextEncoder().encode(pendingInput + data).byteLength <= 65536
+            )
+              pendingInput += data;
             else error = "Terminal input buffer exceeds its limit";
           }),
           renderer.onResize(({ cols, rows }) => {
@@ -99,8 +111,13 @@
           }),
         );
         const createSession = async () => {
-          const options = resolveTerminalCreateOptions(plugin.getSettings(), app ?? application, fitted);
-          const created = await (sessionOwner?.acquire(options) ?? plugin.sessions.create(options));
+          const options = resolveTerminalCreateOptions(
+            plugin.getSettings(),
+            app ?? application,
+            fitted,
+          );
+          const created = await (sessionOwner?.acquire(options) ??
+            plugin.sessions.create(options));
           if (cancelled) return;
           boundSessionId = created.sessionId;
           activeSessionId = created.sessionId;
@@ -111,7 +128,11 @@
           await createSession();
         } else {
           try {
-            await plugin.sessions.resize(boundSessionId, fitted.cols, fitted.rows);
+            await plugin.sessions.resize(
+              boundSessionId,
+              fitted.cols,
+              fitted.rows,
+            );
             lastSent = fitted;
           } catch {
             sessionOwner?.forget(boundSessionId);
@@ -122,14 +143,17 @@
           if (chunk.id === boundSessionId) renderer.write(chunk.bytes);
         }
         if (!cancelled && boundSessionId) {
-          if (pendingInput) await plugin.sessions.write(boundSessionId, pendingInput);
+          if (pendingInput)
+            await plugin.sessions.write(boundSessionId, pendingInput);
           pendingInput = "";
           if (!cancelled) ready = true;
         }
       } catch (caught: unknown) {
         if (!cancelled) {
           error =
-            caught instanceof Error ? caught.message : "Unable to start a terminal session";
+            caught instanceof Error
+              ? caught.message
+              : "Unable to start a terminal session";
         }
       }
     })();
@@ -162,8 +186,25 @@
         "Terminal sessions require a supported native host with terminal access enabled.",
     )}
   {:else if error}
-    {@render hostEmpty("terminal-error", "circle-alert", "Unable to start terminal", error)}
+    {@render hostEmpty(
+      "terminal-error",
+      "circle-alert",
+      "Unable to start terminal",
+      error,
+    )}
   {:else}
+    <div class="terminal-toolbar">
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="New Terminal"
+        title="New Terminal"
+        disabled={!activeSessionId}
+        onclick={() => void plugin.createTerminal()}
+      >
+        <WorkspaceIcon name="plus" />
+      </Button>
+    </div>
     {#key rendererKey}
       <div
         class="terminal-surface"
@@ -200,13 +241,20 @@
     box-sizing: border-box;
     height: 100%;
     min-height: 0;
-    padding: var(--ui-workspace-explorer-content-padding, 0.5rem);
+    padding: 0;
     color: var(--ui-workspace-view-foreground);
     background: var(--ui-workspace-view-background);
   }
 
   .terminal-panel--empty {
     padding: 0;
+  }
+
+  .terminal-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 0.25rem;
+    flex: 0 0 auto;
   }
 
   .terminal-panel-empty {

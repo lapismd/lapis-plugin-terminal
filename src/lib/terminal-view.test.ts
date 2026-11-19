@@ -10,7 +10,14 @@ import {
 
 vi.mock("@lapis-notes/api", () => ({
   View: class {
+    state: Record<string, unknown> = {};
     constructor(public leaf: WorkspaceLeaf) {}
+    getState() {
+      return this.state;
+    }
+    async setState(state: Record<string, unknown>) {
+      this.state = state;
+    }
     get app() {
       return this.leaf.app;
     }
@@ -89,4 +96,22 @@ it("hands a pending PTY to a replacement view on the same leaf", async () => {
   expect(replacement.getState()).toEqual({ sessionId: "retained" });
   await replacement.onunload();
   expect(stop).toHaveBeenCalledExactlyOnceWith("retained");
+});
+
+it("omits an unbound session from layout snapshots so richer live state survives projection", async () => {
+  const plugin = {
+    reserveTerminalNumber: () => 1,
+  } as unknown as TerminalPlugin;
+  const view = new TerminalView({} as WorkspaceLeaf, plugin);
+  await view.setState({ terminalNumber: 1, sessionId: null });
+  expect(view.getState()).toEqual({ terminalNumber: 1 });
+});
+
+it("persists a bound session in layout snapshots", async () => {
+  const plugin = {
+    reserveTerminalNumber: () => 1,
+  } as unknown as TerminalPlugin;
+  const view = new TerminalView({} as WorkspaceLeaf, plugin);
+  await view.setState({ terminalNumber: 1, sessionId: "bound" });
+  expect(view.getState()).toEqual({ terminalNumber: 1, sessionId: "bound" });
 });

@@ -29,3 +29,11 @@ the packaged Ghostty WASM and runtime manifest in a clean consumer, checks npm
 signatures and provenance, and only then creates the GitHub release. Initial
 publication may use the protected bootstrap token; later releases use the npm
 trusted publisher through GitHub OIDC.
+
+Renderer lifecycle, theme and viewport checks run in real Chromium at Retina pixel density alongside units. Unpublished upstream renderer qualification uses ignored archives and explicit pnpm hooks without lockfile writes; portable registry ranges remain authoritative for publication.
+
+The maintained Ghostty patch is an explicit user-authorized exception to the
+workspace dependency-patch restriction. It backports the owning upstream source
+fix to the exact registry version, records source/artifact hashes, and is bundled
+into the public Terminal package. Local archive overrides are not required for
+Ghostty acceptance. CI and tagged release qualification verify both normal source and packaged runtime lanes.

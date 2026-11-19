@@ -7,7 +7,10 @@ const sourceRoot = resolve(fileURLToPath(new URL(".", import.meta.url)));
 
 describe("TerminalPlugin contracts", () => {
   it("registers Open Terminal, New Terminal, and a bottom-panel seed", () => {
-    const source = readFileSync(resolve(sourceRoot, "terminal-plugin.ts"), "utf8");
+    const source = readFileSync(
+      resolve(sourceRoot, "terminal-plugin.ts"),
+      "utf8",
+    );
     const manifest = readFileSync(
       resolve(sourceRoot, "../../package.json"),
       "utf8",
@@ -29,12 +32,15 @@ describe("TerminalPlugin contracts", () => {
   });
 
   it("renders unavailable and error states with design-core Empty", () => {
-    const panel = readFileSync(resolve(sourceRoot, "terminal-panel.svelte"), "utf8");
+    const panel = readFileSync(
+      resolve(sourceRoot, "terminal-panel.svelte"),
+      "utf8",
+    );
     const settings = readFileSync(
       resolve(sourceRoot, "register-terminal-settings.ts"),
       "utf8",
     );
-    expect(panel).toContain('@lapismd/design-core/shadcn/empty');
+    expect(panel).toContain("@lapismd/design-core/shadcn/empty");
     expect(panel).toContain("@lapismd/design-core/workspace/icon");
     expect(panel).toContain("Empty.Root");
     expect(panel).toContain("Empty.Title");
@@ -51,9 +57,18 @@ describe("TerminalPlugin contracts", () => {
   });
 
   it("subscribes to session output before create and follows the host theme", () => {
-    const panel = readFileSync(resolve(sourceRoot, "terminal-panel.svelte"), "utf8");
-    const wrap = readFileSync(resolve(sourceRoot, "renderers/wrap-ghostty.ts"), "utf8");
-    const ghostty = readFileSync(resolve(sourceRoot, "renderers/ghostty-engine.ts"), "utf8");
+    const panel = readFileSync(
+      resolve(sourceRoot, "terminal-panel.svelte"),
+      "utf8",
+    );
+    const wrap = readFileSync(
+      resolve(sourceRoot, "renderers/wrap-ghostty.ts"),
+      "utf8",
+    );
+    const ghostty = readFileSync(
+      resolve(sourceRoot, "renderers/ghostty-engine.ts"),
+      "utf8",
+    );
     expect(panel.indexOf("plugin.sessions.onOutput(writeBound)")).toBeLessThan(
       panel.indexOf("plugin.sessions.create"),
     );
@@ -65,9 +80,7 @@ describe("TerminalPlugin contracts", () => {
     expect(panel).toContain("closeBoundSession");
     expect(panel).toContain("isUnavailableSession");
     expect(panel).not.toContain("process exited");
-    expect(panel).toContain(
-      "padding: var(--ui-workspace-explorer-content-padding, 0.5rem)",
-    );
+    expect(panel).toMatch(/\.terminal-panel\s*\{[^}]*padding: 0;/s);
     expect(panel).toContain(".terminal-panel--empty");
     expect(panel).toContain("square-terminal");
     expect(wrap).toContain("resolveTerminalHostTheme");

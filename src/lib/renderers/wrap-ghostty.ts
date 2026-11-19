@@ -49,7 +49,6 @@ export function wrapGhosttyRenderer(
       terminal.loadAddon(fit as never);
       terminal.open(element);
       opened = true;
-      applyHostTheme(element, terminal, true);
       subscriptions.push(
         subscribe(terminal.onData, (data) => {
           for (const listener of dataListeners) listener(data);
@@ -168,7 +167,7 @@ function observeHostTheme(
   const observer = new MutationObserver(apply);
   observer.observe(element.ownerDocument.documentElement, {
     attributes: true,
-    attributeFilter: ["class", "data-theme", "style"],
+    attributeFilter: ["class", "data-theme", "data-ui-theme", "style"],
   });
   return () => observer.disconnect();
 }
@@ -184,6 +183,13 @@ function applyHostTheme(
     terminal.options.theme = { ...terminal.options.theme, ...theme };
     return;
   }
+  // Ghostty renders resolved default cell colours from its VT state. Updating
+  // only the canvas theme leaves existing default cells in the previous mode.
+  // Standard OSC default-colour commands update that state without replacing
+  // the session or assigning the unsupported post-open options.theme setter.
+  terminal.write(
+    `\x1b]10;${theme.foreground}\x1b\\\x1b]11;${theme.background}\x1b\\`,
+  );
   terminal.renderer?.setTheme?.(theme);
 }
 
