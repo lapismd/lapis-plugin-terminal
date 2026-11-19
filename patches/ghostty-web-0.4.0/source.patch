@@ -1,0 +1,381 @@
+diff --git a/lib/addons/fit.test.ts b/lib/addons/fit.test.ts
+index 2da7bd0052..89692f0852 100644
+--- a/lib/addons/fit.test.ts
++++ b/lib/addons/fit.test.ts
+@@ -206,13 +206,13 @@
+     addon.activate(mockTerminal as any);
+     addon.fit();
+ 
+-    // Expected: (900 - 15 scrollbar) / 9 = 98 cols, 480 / 16 = 30 rows
+-    expect(resizedCols).toBe(98);
++    // The scrollbar overlays the canvas: 900 / 9 = 100 cols, 480 / 16 = 30 rows
++    expect(resizedCols).toBe(100);
+     expect(resizedRows).toBe(30);
+   });
+ 
+   test('proposeDimensions returns correct values', () => {
+-    // FitAddon subtracts 15px for scrollbar width
++    // Overlay scrollbars do not reserve terminal columns.
+     const mockElement = document.createElement('div');
+     Object.defineProperty(mockElement, 'clientWidth', { value: 720, configurable: true });
+     Object.defineProperty(mockElement, 'clientHeight', { value: 384, configurable: true });
+@@ -230,7 +230,7 @@
+     addon.activate(mockTerminal as any);
+     const dims = addon.proposeDimensions();
+ 
+-    // Expected: (720 - 15 scrollbar) / 8 = 88 cols, 384 / 16 = 24 rows
+-    expect(dims).toEqual({ cols: 88, rows: 24 });
++    // Expected: 720 / 8 = 90 cols, 384 / 16 = 24 rows
++    expect(dims).toEqual({ cols: 90, rows: 24 });
+   });
+ });
+diff --git a/lib/addons/fit.ts b/lib/addons/fit.ts
+index ea532656d7..575643bde0 100644
+--- a/lib/addons/fit.ts
++++ b/lib/addons/fit.ts
+@@ -21,7 +21,6 @@
+ 
+ const MINIMUM_COLS = 2;
+ const MINIMUM_ROWS = 1;
+-const DEFAULT_SCROLLBAR_WIDTH = 15; // Reserve space for future scrollback scrollbar
+ const RESIZE_DEBOUNCE_MS = 100; // Debounce time for ResizeObserver
+ 
+ // ============================================================================
+@@ -103,6 +102,7 @@
+       (dims.cols === this._lastCols && dims.rows === this._lastRows) ||
+       (dims.cols === currentCols && dims.rows === currentRows)
+     ) {
++      this.fitViewport();
+       return;
+     }
+ 
+@@ -118,6 +118,7 @@
+       if (terminal.resize && typeof terminal.resize === 'function') {
+         terminal.resize(dims.cols, dims.rows);
+       }
++      this.fitViewport();
+     } finally {
+       // Clear flag after a short delay to allow DOM to settle
+       setTimeout(() => {
+@@ -185,7 +186,7 @@
+     }
+ 
+     // Calculate available space (subtract padding since clientWidth includes padding)
+-    const availableWidth = containerWidth - paddingLeft - paddingRight - DEFAULT_SCROLLBAR_WIDTH;
++    const availableWidth = containerWidth - paddingLeft - paddingRight;
+     const availableHeight = containerHeight - paddingTop - paddingBottom;
+ 
+     // Calculate dimensions (enforce minimums)
+@@ -195,6 +196,17 @@
+     return { cols, rows };
+   }
+ 
++  private fitViewport(): void {
++    const terminal = this._terminal;
++    const element = terminal?.element;
++    if (!element || !terminal.resizeViewport) return;
++    const style = window.getComputedStyle(element);
++    const padding = (name: string) => Number.parseFloat(style.getPropertyValue(name)) || 0;
++    const width = element.clientWidth - padding('padding-left') - padding('padding-right');
++    const height = element.clientHeight - padding('padding-top') - padding('padding-bottom');
++    if (width > 0 && height > 0) terminal.resizeViewport(width, height);
++  }
++
+   /**
+    * Observe the terminal's container for resize events
+    *
+diff --git a/lib/default-colors.test.ts b/lib/default-colors.test.ts
+new file mode 100644
+index 0000000000..b535b42c59
+--- /dev/null
++++ b/lib/default-colors.test.ts
+@@ -0,0 +1,23 @@
++import { expect, test } from 'bun:test';
++import { Ghostty } from './ghostty';
++
++test('OSC default colors update existing default cells and preserve explicit colors', async () => {
++  const ghostty = await Ghostty.load();
++  const terminal = ghostty.createTerminal(20, 4, {
++    fgColor: 0x222222,
++    bgColor: 0xffffff,
++  });
++  try {
++    terminal.write('plain \x1b[48;2;255;0;0mred\x1b[0m');
++    terminal.update();
++    terminal.write('\x1b]10;#d4d4d4\x1b\\\x1b]11;#1e1e1e\x1b\\');
++    terminal.update();
++    expect(terminal.getColors().background).toEqual({ r: 30, g: 30, b: 30 });
++    expect(terminal.getColors().foreground).toEqual({ r: 212, g: 212, b: 212 });
++    const line = terminal.getLine(0)!;
++    expect([line[0].bg_r, line[0].bg_g, line[0].bg_b]).toEqual([30, 30, 30]);
++    expect([line[6].bg_r, line[6].bg_g, line[6].bg_b]).toEqual([255, 0, 0]);
++  } finally {
++    terminal.free();
++  }
++});
+diff --git a/lib/fit-viewport.test.ts b/lib/fit-viewport.test.ts
+new file mode 100644
+index 0000000000..037446dd17
+--- /dev/null
++++ b/lib/fit-viewport.test.ts
+@@ -0,0 +1,32 @@
++import { expect, test } from 'bun:test';
++import { FitAddon } from './addons/fit';
++import { createIsolatedTerminal } from './test-helpers';
++
++test('fit fills the container without a reserved scrollbar gutter or stretched cells', async () => {
++  const terminal = await createIsolatedTerminal();
++  const element = document.createElement('div');
++  let width = 901;
++  Object.defineProperty(element, 'clientWidth', { get: () => width });
++  Object.defineProperty(element, 'clientHeight', { value: 207 });
++  document.body.append(element);
++  const fit = new FitAddon();
++  terminal.loadAddon(fit);
++  try {
++    terminal.open(element);
++    const metrics = terminal.renderer!.getMetrics();
++    fit.fit();
++    expect(terminal.cols).toBe(Math.floor(width / metrics.width));
++    const canvas = element.querySelector('canvas')!;
++    expect(canvas.style.width).toBe('901px');
++    expect(canvas.style.height).toBe('207px');
++    expect(terminal.renderer!.getMetrics()).toEqual(metrics);
++    await new Promise((resolve) => setTimeout(resolve, 55));
++    width = 902;
++    fit.fit();
++    expect(canvas.style.width).toBe('902px');
++    expect(canvas.width).toBe(Math.round(width * window.devicePixelRatio));
++  } finally {
++    terminal.dispose();
++    element.remove();
++  }
++});
+diff --git a/lib/interfaces.ts b/lib/interfaces.ts
+index 5b2017d5a4..a1933dd8c6 100644
+--- a/lib/interfaces.ts
++++ b/lib/interfaces.ts
+@@ -70,6 +70,7 @@
+   rows: number;
+   element?: HTMLElement;
+   textarea?: HTMLTextAreaElement;
++  resizeViewport?(width: number, height: number): void;
+ }
+ 
+ /**
+diff --git a/lib/renderer.ts b/lib/renderer.ts
+index 0e682beff0..69d3eb3cf2 100644
+--- a/lib/renderer.ts
++++ b/lib/renderer.ts
+@@ -102,6 +102,8 @@
+   private devicePixelRatio: number;
+   private metrics: FontMetrics;
+   private palette: string[];
++  private viewportSize?: { width: number; height: number };
++  private themeChanged = false;
+ 
+   // Cursor blinking state
+   private cursorVisible: boolean = true;
+@@ -234,16 +236,16 @@
+    * Resize canvas to fit terminal dimensions
+    */
+   public resize(cols: number, rows: number): void {
+-    const cssWidth = cols * this.metrics.width;
+-    const cssHeight = rows * this.metrics.height;
++    const cssWidth = this.viewportSize?.width ?? cols * this.metrics.width;
++    const cssHeight = this.viewportSize?.height ?? rows * this.metrics.height;
+ 
+     // Set CSS size (what user sees)
+     this.canvas.style.width = `${cssWidth}px`;
+     this.canvas.style.height = `${cssHeight}px`;
+ 
+     // Set actual canvas size (scaled for DPI)
+-    this.canvas.width = cssWidth * this.devicePixelRatio;
+-    this.canvas.height = cssHeight * this.devicePixelRatio;
++    this.canvas.width = Math.round(cssWidth * this.devicePixelRatio);
++    this.canvas.height = Math.round(cssHeight * this.devicePixelRatio);
+ 
+     // Scale context to match DPI (setting canvas.width/height resets the context)
+     this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio);
+@@ -280,6 +282,12 @@
+     const dims = buffer.getDimensions();
+     const scrollbackLength = scrollbackProvider ? scrollbackProvider.getScrollbackLength() : 0;
+ 
++    if (this.themeChanged) {
++      this.clear();
++      forceAll = true;
++      this.themeChanged = false;
++    }
++
+     // Check if buffer needs full redraw (e.g., screen change between normal/alternate)
+     if (buffer.needsFullRedraw?.()) {
+       forceAll = true;
+@@ -287,8 +295,14 @@
+ 
+     // Resize canvas if dimensions changed
+     const needsResize =
+-      this.canvas.width !== dims.cols * this.metrics.width * this.devicePixelRatio ||
+-      this.canvas.height !== dims.rows * this.metrics.height * this.devicePixelRatio;
++      this.canvas.width !==
++        Math.round(
++          (this.viewportSize?.width ?? dims.cols * this.metrics.width) * this.devicePixelRatio
++        ) ||
++      this.canvas.height !==
++        Math.round(
++          (this.viewportSize?.height ?? dims.rows * this.metrics.height) * this.devicePixelRatio
++        );
+ 
+     if (needsResize) {
+       this.resize(dims.cols, dims.rows);
+@@ -515,12 +529,13 @@
+    */
+   private renderLine(line: GhosttyCell[], y: number, cols: number): void {
+     const lineY = y * this.metrics.height;
++    const lineWidth = this.viewportSize?.width ?? cols * this.metrics.width;
+ 
+     // Clear line background with theme color.
+     // We clear just the cell area - glyph overflow is handled by also
+     // redrawing adjacent rows (see render() method).
+     this.ctx.fillStyle = this.theme.background;
+-    this.ctx.fillRect(0, lineY, cols * this.metrics.width, this.metrics.height);
++    this.ctx.fillRect(0, lineY, lineWidth, this.metrics.height);
+ 
+     // PASS 1: Draw all cell backgrounds first
+     // This ensures all backgrounds are painted before any text, allowing text
+@@ -770,6 +785,7 @@
+    */
+   public setTheme(theme: ITheme): void {
+     this.theme = { ...DEFAULT_THEME, ...theme };
++    this.themeChanged = true;
+ 
+     // Rebuild palette
+     this.palette = [
+@@ -792,6 +808,14 @@
+     ];
+   }
+ 
++  public setViewportSize(width: number, height: number): boolean {
++    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0)
++      return false;
++    if (this.viewportSize?.width === width && this.viewportSize?.height === height) return false;
++    this.viewportSize = { width, height };
++    return true;
++  }
++
+   /**
+    * Update font size
+    */
+@@ -849,7 +873,7 @@
+ 
+     // Scrollbar dimensions
+     const scrollbarWidth = 8;
+-    const scrollbarX = canvasWidth - scrollbarWidth - 4;
++    const scrollbarX = canvasWidth - scrollbarWidth;
+     const scrollbarPadding = 4;
+     const scrollbarTrackHeight = canvasHeight - scrollbarPadding * 2;
+ 
+diff --git a/lib/terminal.ts b/lib/terminal.ts
+index 3c2fc2f07d..15843495aa 100644
+--- a/lib/terminal.ts
++++ b/lib/terminal.ts
+@@ -242,13 +242,6 @@
+     // Resize canvas to match new font metrics
+     this.renderer.resize(this.cols, this.rows);
+ 
+-    // Update canvas element dimensions to match renderer
+-    const metrics = this.renderer.getMetrics();
+-    this.canvas.width = metrics.width * this.cols;
+-    this.canvas.height = metrics.height * this.rows;
+-    this.canvas.style.width = `${metrics.width * this.cols}px`;
+-    this.canvas.style.height = `${metrics.height * this.rows}px`;
+-
+     // Force full re-render with new font
+     this.renderer.render(this.wasmTerm, true, this.viewportY, this);
+   }
+@@ -654,13 +647,6 @@
+     // Resize renderer
+     this.renderer!.resize(cols, rows);
+ 
+-    // Update canvas dimensions
+-    const metrics = this.renderer!.getMetrics();
+-    this.canvas!.width = metrics.width * cols;
+-    this.canvas!.height = metrics.height * rows;
+-    this.canvas!.style.width = `${metrics.width * cols}px`;
+-    this.canvas!.style.height = `${metrics.height * rows}px`;
+-
+     // Fire resize event
+     this.resizeEmitter.fire({ cols, rows });
+ 
+@@ -669,6 +655,16 @@
+   }
+ 
+   /**
++   * Fill the available CSS viewport without stretching terminal cells.
++   */
++  resizeViewport(width: number, height: number): void {
++    this.assertOpen();
++    if (!this.renderer!.setViewportSize(width, height)) return;
++    this.renderer!.resize(this.cols, this.rows);
++    this.renderer!.render(this.wasmTerm!, true, this.viewportY, this);
++  }
++
++  /**
+    * Clear terminal screen
+    */
+   clear(): void {
+@@ -1550,7 +1546,7 @@
+     const canvasWidth = rect.width;
+     const canvasHeight = rect.height;
+     const scrollbarWidth = 8;
+-    const scrollbarX = canvasWidth - scrollbarWidth - 4;
++    const scrollbarX = canvasWidth - scrollbarWidth;
+     const scrollbarPadding = 4;
+ 
+     // Check if click is in scrollbar area
+diff --git a/patches/ghostty-wasm-api.patch b/patches/ghostty-wasm-api.patch
+index 03cad709f3..70a6c45ccf 100644
+--- a/patches/ghostty-wasm-api.patch
++++ b/patches/ghostty-wasm-api.patch
+@@ -396,7 +396,7 @@
+ index 000000000..d57b4e405
+ --- /dev/null
+ +++ b/src/terminal/c/terminal.zig
+-@@ -0,0 +1,1004 @@
++@@ -0,0 +1,1003 @@
+ +//! C API wrapper for Terminal
+ +//!
+ +//! This provides a minimal, high-performance interface to Ghostty's Terminal
+@@ -573,7 +573,7 @@
+ +            .end_of_input => self.terminal.markSemanticPrompt(.command),
+ +            .end_of_command => self.terminal.screens.active.cursor.page_row.semantic_prompt = .input,
+ +            .mouse_shape => self.terminal.mouse_shape = value,
+-+            .color_operation => try self.colorOperation(value.op, &value.requests),
+++            .color_operation => try self.colorOperation(value),
+ +            .kitty_color_report => try self.kittyColorOperation(value),
+ +
+ +            // Actions that require no response and have no terminal effect
+@@ -674,11 +674,10 @@
+ +        }
+ +    }
+ +
+-+    fn colorOperation(self: *ResponseHandler, op: anytype, requests: anytype) !void {
+-+        _ = self;
+-+        _ = op;
+-+        _ = requests;
+-+        // Color operations are not supported in WASM context
+++    fn colorOperation(self: *ResponseHandler, value: anytype) !void {
+++        var handler = @import("../stream_readonly.zig").Handler.init(self.terminal);
+++        try handler.vt(.color_operation, value);
+++        self.terminal.flags.dirty.palette = true;
+ +    }
+ +
+ +    fn kittyColorOperation(self: *ResponseHandler, value: anytype) !void {
+@@ -819,7 +818,7 @@
+ +    wrapper.handler = ResponseHandler.init(alloc, &wrapper.terminal, &wrapper.response_buffer);
+ +
+ +    // Initialize stream with the handler
+-+    wrapper.stream = ResponseStream.init(wrapper.handler);
+++    wrapper.stream = ResponseStream.initAlloc(alloc, wrapper.handler);
+ +
+ +    wrapper.* = .{
+ +        .alloc = alloc,

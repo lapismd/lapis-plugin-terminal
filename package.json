@@ -20,7 +20,7 @@
     "check:types": "tsc -p tsconfig.node.json --noEmit",
     "test": "vitest run --project unit --passWithNoTests && pnpm test:browser",
     "publint": "publint",
-    "prepack": "svelte-package --tsconfig ./tsconfig.pack.json && node scripts/copy-ghostty-wasm.mjs && publint",
+    "prepack": "svelte-package --tsconfig ./tsconfig.pack.json && node scripts/bundle-ghostty.mjs && publint",
     "spec:build": "spec-validator build",
     "spec:check": "spec-validator check && pnpm check:app-ownership",
     "spec:first": "spec-validator first",
@@ -28,7 +28,9 @@
     "spec:search": "spec-validator search",
     "spec:serve": "spec-validator serve",
     "spec:validate": "spec-validator validate",
-    "test:browser": "vitest run --config vitest.browser.config.ts"
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "patch:ghostty": "node scripts/regenerate-ghostty-patch.mjs",
+    "test:package": "pnpm build && vitest run --config vitest.packaged.config.ts"
   },
   "files": [
     "dist",
@@ -71,10 +73,9 @@
     "vite": "6.4.2",
     "vitest": "4.1.8",
     "@playwright/test": "1.64.1",
-    "@vitest/browser-playwright": "4.1.8"
-  },
-  "dependencies": {
-    "ghostty-web": "^0.4.0"
+    "@vitest/browser-playwright": "4.1.8",
+    "ghostty-web": "0.4.0",
+    "esbuild": "0.25.12"
   },
   "repository": {
     "type": "git",

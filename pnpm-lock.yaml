@@ -4,13 +4,14 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  ghostty-web@0.4.0:
+    hash: 03fceb203540651e975720dcdfcd07552c5ff75a79687f0f6243fda74b96dbe5
+    path: patches/ghostty-web@0.4.0.patch
+
 importers:
 
   .:
-    dependencies:
-      ghostty-web:
-        specifier: ^0.4.0
-        version: 0.4.0
     devDependencies:
       '@lapis-notes/api':
         specifier: 0.6.5
@@ -39,6 +40,12 @@ importers:
       '@vitest/browser-playwright':
         specifier: 4.1.8
         version: 4.1.8(playwright@1.64.1)(vite@6.4.2(@types/node@26.6.6)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(vitest@4.1.8)
+      esbuild:
+        specifier: 0.25.12
+        version: 0.25.12
+      ghostty-web:
+        specifier: 0.4.0
+        version: 0.4.0(patch_hash=03fceb203540651e975720dcdfcd07552c5ff75a79687f0f6243fda74b96dbe5)
       publint:
         specifier: 0.3.12
         version: 0.3.12
@@ -4786,7 +4793,7 @@ snapshots:
       dunder-proto: 1.0.1
       es-object-atoms: 1.1.2
 
-  ghostty-web@0.4.0: {}
+  ghostty-web@0.4.0(patch_hash=03fceb203540651e975720dcdfcd07552c5ff75a79687f0f6243fda74b96dbe5): {}
 
   global-agent@4.1.7:
     dependencies:

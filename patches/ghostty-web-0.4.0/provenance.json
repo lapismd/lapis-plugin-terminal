@@ -1,0 +1,17 @@
+{
+  "version": "0.4.0",
+  "upstream": "https://github.com/coder/ghostty-web",
+  "upstreamPullRequest": "https://github.com/coder/ghostty-web/pull/232",
+  "baseRevision": "9e4e126d89ac3537d2b2ebec075849851566de9f",
+  "ghosttyRevision": "5714ed07a1012573261b7b7e3ed2add9c1504496",
+  "zigVersion": "0.15.2",
+  "artifacts": {
+    "ghostty-web.js": "c3363dc1182e9df19422e9d83ea67677a385a3089cc2566b80af84fb4b3734e6",
+    "ghostty-web.umd.cjs": "bb84537d81079fe36aa1e96375483ca0b2d7f1376ec8f597769090b7102b5e44",
+    "index.d.ts": "d0e609cb336ba6a8dd2f74044d5395611858bdcc88bdeae4f2b6b6e249d4832f",
+    "ghostty-vt.wasm": "af48111ded39d92822c9e2b758b3f6a9d593ca61b167eae268eeb442f5044ed3"
+  },
+  "sourcePatchSha256": "83152dca3c0b6954b36072a0dc069b06a2b93eb95b3bf57009d4d14e542b0374",
+  "packagePatchSha256": "15419d11da6085e4b14dbadae637c47344f731b00d07ac2f7bc3d1d50a957040",
+  "sourcePackageVersion": "0.3.0"
+}

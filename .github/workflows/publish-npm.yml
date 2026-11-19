@@ -49,12 +49,14 @@ jobs:
           if (process.env.GITHUB_REF_NAME !== `v${pkg.version}`)
             throw Error(`Tag ${process.env.GITHUB_REF_NAME} does not match ${pkg.version}`);
           JS
+      - name: Install browser qualification runtime
+        run: pnpm exec playwright install --with-deps chromium
       - name: Qualify source and package
         run: |
           pnpm spec:check
           pnpm check
           pnpm test
-          pnpm build
+          pnpm test:package
           pnpm publint
           npm pack --dry-run --ignore-scripts --json > "$RUNNER_TEMP/terminal-pack.json"
           jq -e '[.[0].files[].path] | index("dist/ghostty-vt.wasm") != null and index("manifest.json") != null' "$RUNNER_TEMP/terminal-pack.json"

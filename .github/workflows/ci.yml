@@ -33,5 +33,5 @@ jobs:
       - run: pnpm spec:check
       - run: pnpm check
       - run: pnpm test
-      - run: pnpm build
+      - run: pnpm test:package
       - run: pnpm publint

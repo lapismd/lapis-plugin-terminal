@@ -31,7 +31,7 @@ export async function createGhosttyRenderer(
       ),
     );
   }
-  const { FitAddon, Ghostty, Terminal } = await import("ghostty-web");
+  const { FitAddon, Ghostty, Terminal } = await import("./ghostty-runtime");
   let ghostty;
   try {
     ghostty = await Ghostty.load();
