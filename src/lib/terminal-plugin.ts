@@ -6,7 +6,10 @@ import {
   WorkspaceLeaf,
 } from "@lapis-notes/api";
 import { registerTerminalSettings } from "./register-terminal-settings";
-import { createGhosttyRenderer } from "./renderers/ghostty-engine";
+import {
+  createGhosttyRenderer,
+  type TerminalAppearanceOptions,
+} from "./renderers/ghostty-engine";
 import type {
   TerminalRenderer,
   TerminalRendererFactory,
@@ -20,6 +23,7 @@ import {
   createTerminalSettingsStore,
   type TerminalPluginSettings,
 } from "./terminal-settings";
+import { terminalToReveal } from "./terminal-open";
 import { TerminalView } from "./terminal-view";
 import { TERMINAL_PLUGIN_ID, TERMINAL_VIEW_TYPE } from "./terminal-view-type";
 
@@ -39,14 +43,17 @@ export class TerminalPlugin extends Plugin {
   #rendererFactory: TerminalRendererFactory = createGhosttyRenderer;
   #hostListeners = new Set<() => void>();
   #hostGeneration = 0;
+  #nextTerminalNumber = 1;
 
   constructor(
     app: App,
     pluginManifest: PluginManifest = MANIFEST,
     sessions?: TerminalSessionClient,
+    appearance?: TerminalAppearanceOptions,
   ) {
     super(app, pluginManifest);
     this.#sessions = sessions ?? createHostTerminalSessionClient();
+    this.#rendererFactory = () => createGhosttyRenderer(appearance);
   }
 
   get sessions(): TerminalSessionClient {
@@ -132,7 +139,7 @@ export class TerminalPlugin extends Plugin {
   }
 
   async openTerminal(): Promise<WorkspaceLeaf> {
-    const existing = this.app.workspace.getLeavesOfType(TERMINAL_VIEW_TYPE)[0];
+    const existing = terminalToReveal(this.app.workspace);
     if (existing) {
       await this.app.workspace.revealLeaf(existing);
       this.app.workspace.setBottomPanelOpen(true);
@@ -148,7 +155,10 @@ export class TerminalPlugin extends Plugin {
       workspace.bottomPanel.addChild(leaf);
       workspace.bottomPanel.selected = leaf;
     }
-    await leaf.setViewState({ type: TERMINAL_VIEW_TYPE, state: {} });
+    await leaf.setViewState({
+      type: TERMINAL_VIEW_TYPE,
+      state: { terminalNumber: this.reserveTerminalNumber() },
+    });
     return leaf;
   }
 
@@ -156,6 +166,18 @@ export class TerminalPlugin extends Plugin {
     const leaf = await this.newTerminalLeaf();
     await this.app.workspace.revealLeaf(leaf);
     return leaf;
+  }
+
+  reserveTerminalNumber(stored?: unknown): number {
+    const number =
+      typeof stored === "number" &&
+      Number.isSafeInteger(stored) &&
+      stored > 0 &&
+      stored < Number.MAX_SAFE_INTEGER
+        ? stored
+        : this.#nextTerminalNumber;
+    this.#nextTerminalNumber = Math.max(this.#nextTerminalNumber, number + 1);
+    return number;
   }
 
   async onunload(): Promise<void> {

@@ -29,3 +29,5 @@ the packaged Ghostty WASM and runtime manifest in a clean consumer, checks npm
 signatures and provenance, and only then creates the GitHub release. Initial
 publication may use the protected bootstrap token; later releases use the npm
 trusted publisher through GitHub OIDC.
+
+Renderer lifecycle, theme and viewport checks run in real Chromium at Retina pixel density alongside units. Unpublished upstream renderer qualification uses ignored archives and explicit pnpm hooks without lockfile writes; portable registry ranges remain authoritative for publication.

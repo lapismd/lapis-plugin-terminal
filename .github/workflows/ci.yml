@@ -29,6 +29,7 @@ jobs:
         with:
           tool: mdbook@0.5.4
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm spec:check
       - run: pnpm check
       - run: pnpm test
