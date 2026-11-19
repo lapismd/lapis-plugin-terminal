@@ -37,3 +37,6 @@ workspace dependency-patch restriction. It backports the owning upstream source
 fix to the exact registry version, records source/artifact hashes, and is bundled
 into the public Terminal package. Local archive overrides are not required for
 Ghostty acceptance. CI and tagged release qualification verify both normal source and packaged runtime lanes.
+
+The 0.1.1 release uses the existing immutable v-tag workflow after source and
+packaged-runtime qualification, retaining the pnpm patch and its checksums.

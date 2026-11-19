@@ -43,7 +43,7 @@ export default defineConfig(tableRequirements(), {
     book: true,
     packageManifest: {
       name: "@lapis-notes/lapis-plugin-terminal",
-      version: "0.1.0",
+      version: "0.1.1",
       privateAllowed: false,
       portableDependencies: true,
       manifestPath: "manifest.json",

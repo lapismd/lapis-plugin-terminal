@@ -76,3 +76,7 @@ matching embedded and fallback WASM, types, licence and provenance so consumers
 need no patch or installation hook. Ghostty is a pinned build dependency, not a
 runtime dependency. Hash drift fails packaging. Regeneration/removal instructions
 live in patches/ghostty-web-0.4.0/README.md; existing browser regressions remain gates.
+
+Release 0.1.1 carries the reviewed host font configuration, terminal controls and
+self-contained patched Ghostty runtime. npm, runtime and manifest versions must
+match; the native Server shell profile remains outside this release.

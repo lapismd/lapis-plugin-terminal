@@ -30,7 +30,7 @@ import { TERMINAL_PLUGIN_ID, TERMINAL_VIEW_TYPE } from "./terminal-view-type";
 const MANIFEST: PluginManifest = {
   id: TERMINAL_PLUGIN_ID,
   name: "Terminal",
-  version: "0.1.0",
+  version: "0.1.1",
   minAppVersion: "0.0.1",
   description: "Interactive shell sessions in the workspace bottom panel.",
   author: "Lapis Notes",
