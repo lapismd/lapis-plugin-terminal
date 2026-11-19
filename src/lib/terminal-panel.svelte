@@ -159,7 +159,7 @@
       "square-terminal",
       "Terminal unavailable",
       plugin.sessions.reason ??
-        "Start lapis-terminal-host and set the Terminal server URL and token, or use the desktop host.",
+        "Terminal sessions require a supported native host with terminal access enabled.",
     )}
   {:else if error}
     {@render hostEmpty("terminal-error", "circle-alert", "Unable to start terminal", error)}

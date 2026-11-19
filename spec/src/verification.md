@@ -7,7 +7,7 @@
 | LPT-003      | Implemented | New Terminal command creates a bottom leaf                                                                                                        |
 | LPT-004      | Implemented | layout-ready seed when no terminal leaf exists                                                                                                    |
 | LPT-005      | Implemented | application-ownership test and package.json peers                                                                                                 |
-| LPT-006      | Implemented | unavailable empty state in TerminalPanel                                                                                                          |
+| LPT-006      | Implemented | unavailable empty state and native-host guidance regressions in TerminalPanel and the live session client                                         |
 | LPT-007      | Planned     | Package Storybook placements                                                                                                                      |
 | LPT-008      | Implemented | Ghostty-only renderer contract, raw-byte session client tests, and dependency audit                                                               |
 | LPT-009      | Implemented | settings tests ignore legacy renderer values and retain shell plus cwd                                                                            |
