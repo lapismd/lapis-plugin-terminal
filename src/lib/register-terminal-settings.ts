@@ -47,7 +47,7 @@ export function registerTerminalSettings(plugin: TerminalPlugin & Plugin): void 
           type: "string" as const,
           title: "Start directory",
           description:
-            "Directory for new sessions. Leave empty to use the vault on desktop or the terminal-host workspace on web.",
+            "Directory for new sessions. Leave empty to use the desktop vault path or the native host workspace.",
           default: "",
           placeholder: "notes",
         },

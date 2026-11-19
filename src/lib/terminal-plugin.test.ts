@@ -30,6 +30,10 @@ describe("TerminalPlugin contracts", () => {
 
   it("renders unavailable and error states with design-core Empty", () => {
     const panel = readFileSync(resolve(sourceRoot, "terminal-panel.svelte"), "utf8");
+    const settings = readFileSync(
+      resolve(sourceRoot, "register-terminal-settings.ts"),
+      "utf8",
+    );
     expect(panel).toContain('@lapismd/design-core/shadcn/empty');
     expect(panel).toContain("@lapismd/design-core/workspace/icon");
     expect(panel).toContain("Empty.Root");
@@ -38,6 +42,12 @@ describe("TerminalPlugin contracts", () => {
     expect(panel).toContain("terminal-unavailable");
     expect(panel).toContain("terminal-error");
     expect(panel).toContain("data-testid={testId}");
+    expect(panel).toContain(
+      "Terminal sessions require a supported native host with terminal access enabled.",
+    );
+    expect(panel).not.toContain("lapis-terminal-host");
+    expect(panel).not.toContain("Terminal server URL");
+    expect(settings).not.toContain("terminal-host workspace on web");
   });
 
   it("subscribes to session output before create and follows the host theme", () => {

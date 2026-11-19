@@ -9,7 +9,7 @@ export type { TerminalSessionClient, TerminalSessionSummary };
 export { createFakeTerminalSessionClient } from "./terminal-session-fake";
 
 const UNAVAILABLE_REASON =
-  "Start lapis-terminal-host and set the Terminal server URL and token, or use the desktop host.";
+  "Terminal sessions require a supported native host with terminal access enabled.";
 
 export function createHostTerminalSessionClient(): TerminalSessionClient {
   return {

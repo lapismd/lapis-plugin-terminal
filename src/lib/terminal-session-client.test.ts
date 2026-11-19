@@ -38,4 +38,16 @@ describe("createFakeTerminalSessionClient", () => {
       /const available = hasNativeDesktopCapability\("terminal-runtime"\)/u,
     );
   });
+
+  it("directs unavailable users to a supported native host", () => {
+    const source = readFileSync(
+      resolve(fileURLToPath(new URL(".", import.meta.url)), "terminal-session-client.ts"),
+      "utf8",
+    );
+    expect(source).toContain(
+      "Terminal sessions require a supported native host with terminal access enabled.",
+    );
+    expect(source).not.toContain("lapis-terminal-host");
+    expect(source).not.toContain("Terminal server URL");
+  });
 });
